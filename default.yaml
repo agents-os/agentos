@@ -1,0 +1,40 @@
+# AgentOS Production Configuration
+name: production_assistant
+model_provider: gemini
+model_version: models/gemini-2.0-flash-lite
+isolated: false # Disable sandboxing for this example
+
+# Scheduling (optional)
+# time: 23        # Run daily at 11 PM (24-hour format)
+# repeat: 5       # Repeat every 5 minutes
+# Security: Blocked commands (production defaults)
+DESTRUCTIVE_COMMANDS:
+  - rm
+  - rmdir
+  - dd
+  - mkfs
+  - fdisk
+  - format
+  - del
+  - rd
+  - erase
+  - chown
+  - chmod
+  - truncate
+  - shred
+  - sudo
+  - su
+  - mv # Can be destructive
+  - rf
+  - kill
+  - killall
+  - pkill
+  - reboot
+  - shutdown
+  - halt
+  - poweroff
+  - mount
+  - umount
+  - crontab
+  - systemctl
+  - service

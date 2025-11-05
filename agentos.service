@@ -1,0 +1,34 @@
+[Unit]
+Description=AgentOS Web UI Service
+After=network.target
+Documentation=https://github.com/agentos/agentos
+
+[Service]
+Type=simple
+User=agentos
+Group=agentos
+WorkingDirectory=/opt/agentos
+Environment="PATH=/opt/agentos/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="FLASK_ENV=production"
+Environment="AGENTOS_LOG_LEVEL=INFO"
+EnvironmentFile=-/etc/agentos/agentos.env
+ExecStart=/opt/agentos/venv/bin/python3 -m gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 --access-logfile /var/log/agentos/access.log --error-logfile /var/log/agentos/error.log web_ui:app
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=agentos
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/agentos /var/log/agentos /home/agentos/.agentos
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=512
+
+[Install]
+WantedBy=multi-user.target

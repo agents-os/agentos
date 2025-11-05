@@ -1,0 +1,37 @@
+# Core dependencies
+pyyaml>=6.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# LLM providers
+ollama>=0.1.0
+openai>=1.0.0
+anthropicbedrock>=0.1.0
+google-generativeai>=0.3.0
+cohere>=4.0.0
+
+# Enhanced CLI and UI
+typer>=0.9.0
+rich>=13.7.0
+click>=8.0.0
+flask>=2.3.0
+pywebview>=4.4.0
+PyQt5>=5.15.0
+PyQtWebEngine>=5.15.0
+QtPy>=2.0.0
+
+# Production web server
+gunicorn>=21.0.0
+gevent>=23.0.0
+
+# Docker support (optional)
+docker>=6.0.0
+
+# Monitoring and logging
+prometheus-client>=0.19.0
+
+# Development dependencies (optional)
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
+pytest-cov>=4.0.0

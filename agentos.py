@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""
+AgentOS – Production Runtime
+Main entrypoint for CLI + Daemon
+"""
+
+import logging
+import sys
+from pathlib import Path
+
+from rich.console import Console
+
+from agentos.cli.cli_commands import (
+    cmd_app,
+    cmd_logs,
+    cmd_ps,
+    cmd_run,
+    cmd_schedule,
+    cmd_ui,
+    cmd_unschedule,
+    enhanced_prune,
+    enhanced_stop,
+)
+from agentos.cli.cli_helpers import create_default_manifest, show_welcome
+from agentos.cli.cli_parser import create_parser
+
+LOG_DIR = Path.home() / ".agentos" / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+console = Console()
+
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_DIR / "agentos.log"),
+    ],
+)
+logger = logging.getLogger(__name__)
+
+
+def main():
+    parser = create_parser()
+
+    for action in parser._subparsers._actions:
+        if hasattr(action, "choices") and action.choices:
+            action.choices["run"].set_defaults(func=cmd_run)
+            action.choices["ps"].set_defaults(func=cmd_ps)
+            action.choices["logs"].set_defaults(func=cmd_logs)
+            action.choices["stop"].set_defaults(
+                func=lambda args: enhanced_stop(args.agent)
+            )
+            action.choices["prune"].set_defaults(
+                func=lambda args: enhanced_prune(args.force)
+            )
+            action.choices["init"].set_defaults(
+                func=lambda args: create_default_manifest(args.name)
+            )
+            action.choices["schedule"].set_defaults(func=cmd_schedule)
+            action.choices["unschedule"].set_defaults(func=cmd_unschedule)
+            action.choices["ui"].set_defaults(func=cmd_ui)
+            action.choices["app"].set_defaults(func=cmd_app)
+
+    args = parser.parse_args()
+
+    if hasattr(args, "no_color") and args.no_color:
+        console._color_system = None
+
+    if hasattr(args, "verbose") and args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        console.print("[dim]Verbose logging enabled[/dim]")
+
+    if hasattr(args, "func"):
+        try:
+            args.func(args)
+        except KeyboardInterrupt:
+            console.print("\n[yellow]⚠️  Operation cancelled[/yellow]")
+            sys.exit(130)
+        except Exception as e:
+            console.print(f"[red]❌ Command failed: {e}[/red]")
+            if hasattr(args, "verbose") and args.verbose:
+                console.print_exception()
+            sys.exit(1)
+    else:
+        show_welcome()
+
+
+if __name__ == "__main__":
+    main()

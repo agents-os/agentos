@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AgentOS{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <!-- Header -->
+    <div class="app-header">
+        <div class="flex items-center gap-3">
+            <div>🤖</div>
+            <h1>AgentOS</h1>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+        <a href="/" class="nav-tab">Dashboard</a>
+        <a href="/agents" class="nav-tab">Agents</a>
+        <a href="/schedule" class="nav-tab">Schedule</a>
+        <a href="/create-manifest" class="nav-tab">Create Manifest</a>
+        <a href="/run-agent" class="nav-tab">Run Agent</a>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // Auto-refresh data every 5 seconds
+        setInterval(() => {
+            if (typeof refreshData === 'function') {
+                refreshData();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

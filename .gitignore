@@ -1,0 +1,6 @@
+plan.md
+.env
+.venv
+venv/
+__pycache__/
+*.pyc

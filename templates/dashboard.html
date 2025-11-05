@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AgentOS{% endblock %}
+
+{% block content %}
+<div x-data="dashboard()" x-init="init()" class="flex flex-col flex-1">
+    <div class="page-header">
+        <h2 class="page-title">📊 Dashboard</h2>
+        <button @click="refreshData()" class="btn btn-primary">🔄 Refresh</button>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">🟢</div>
+            <div>
+                <p class="stat-label">Running</p>
+                <p class="stat-value running" x-text="stats.running">{{ stats.running }}</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div>
+                <p class="stat-label">Completed</p>
+                <p class="stat-value completed" x-text="stats.completed">{{ stats.completed }}</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">❌</div>
+            <div>
+                <p class="stat-label">Failed</p>
+                <p class="stat-value failed" x-text="stats.failed">{{ stats.failed }}</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div>
+                <p class="stat-label">Total</p>
+                <p class="stat-value total" x-text="stats.total">{{ stats.total }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Agents -->
+    <div class="table-container">
+        <div class="table-header">
+            <h3 class="table-title">🤖 Recent Agents</h3>
+        </div>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Started</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="agent in agents.slice(0, 10)" :key="agent.id">
+                        <tr>
+                            <td class="cell-id" x-text="agent.id.substring(0, 8)"></td>
+                            <td class="cell-name" x-text="agent.name"></td>
+                            <td>
+                                <span :class="getStatusClass(agent.status)" x-text="agent.status"></span>
+                            </td>
+                            <td class="cell-secondary" x-text="formatDate(agent.started_at)"></td>
+                            <td>
+                                <button @click="viewLogs(agent.id)" class="btn-link">Logs</button>
+                                <button x-show="agent.status === 'running'" @click="stopAgent(agent.id)" class="btn-link btn-danger">Stop</button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Scheduled Agents -->
+    <div class="bg-gray-800 rounded-lg shadow border border-gray-700">
+        <div class="p-6 border-b border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-100">🕰️ Scheduled Agents</h3>
+        </div>
+        <div class="p-6" x-show="Object.keys(scheduled).length === 0">
+            <p class="text-gray-400">No scheduled agents found.</p>
+        </div>
+        <div class="overflow-x-auto" x-show="Object.keys(scheduled).length > 0">
+            <table class="w-full">
+                <thead class="bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Next Run</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Task</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700">
+                    <template x-for="[id, info] in Object.entries(scheduled)" :key="id">
+                        <tr>
+                            <td class="px-6 py-4 text-sm font-mono text-gray-300" x-text="id"></td>
+                            <td class="px-6 py-4 text-sm text-gray-100" x-text="info.type"></td>
+                            <td class="px-6 py-4 text-sm text-gray-300" x-text="info.next_run"></td>
+                            <td class="px-6 py-4 text-sm text-gray-100" x-text="info.task"></td>
+                            <td class="px-6 py-4 text-sm">
+                                <button @click="removeSchedule(id)" class="text-red-400 hover:text-red-300">Remove</button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function dashboard() {
+    return {
+        agents: {{ agents | tojson }},
+        scheduled: {{ scheduled | tojson }},
+        stats: {{ stats | tojson }},
+        
+        init() {
+            this.refreshData();
+        },
+        
+        refreshData() {
+            fetch('/api/agents')
+                .then(r => r.json())
+                .then(data => {
+                    this.agents = data;
+                    this.updateStats();
+                });
+            
+            fetch('/api/schedule')
+                .then(r => r.json())
+                .then(data => this.scheduled = data);
+        },
+        
+        updateStats() {
+            this.stats = {
+                running: this.agents.filter(a => a.status === 'running').length,
+                completed: this.agents.filter(a => a.status === 'completed').length,
+                failed: this.agents.filter(a => a.status === 'failed').length,
+                total: this.agents.length
+            };
+        },
+        
+        getStatusClass(status) {
+            const classes = {
+                'running': 'status-badge status-running',
+                'completed': 'status-badge status-completed',
+                'failed': 'status-badge status-failed',
+                'stopped': 'status-badge status-stopped'
+            };
+            return classes[status] || classes['stopped'];
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            return new Date(dateStr).toLocaleString();
+        },
+        
+        viewLogs(agentId) {
+            window.open(`/agents#logs-${agentId}`, '_blank');
+        },
+        
+        stopAgent(agentId) {
+            if (confirm('Stop this agent?')) {
+                fetch(`/api/agent/${agentId}/stop`, { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.refreshData();
+                        } else {
+                            alert('Failed to stop agent: ' + data.error);
+                        }
+                    });
+            }
+        },
+        
+        removeSchedule(scheduleId) {
+            if (confirm('Remove this scheduled agent?')) {
+                fetch(`/api/schedule/${scheduleId}/remove`, { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.refreshData();
+                        } else {
+                            alert('Failed to remove schedule: ' + data.error);
+                        }
+                    });
+            }
+        }
+    }
+}
+
+// Global refresh function for auto-refresh
+function refreshData() {
+    // Find Alpine component and refresh if available
+    const alpineEl = document.querySelector('[x-data="dashboard()"]');
+    if (alpineEl && alpineEl._x_dataStack && alpineEl._x_dataStack[0]) {
+        alpineEl._x_dataStack[0].refreshData();
+    }
+}
+</script>
+{% endblock %}

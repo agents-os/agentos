@@ -1,0 +1,18 @@
+# AgentOS Quick Start Example
+# This manifest demonstrates basic agent configuration
+
+name: quick_start_agent
+model_provider: github
+model_version: openai/gpt-4o-mini
+isolated: true
+
+# Optional: Custom blocked commands (inherits defaults)
+DESTRUCTIVE_COMMANDS:
+  - rm
+  - rmdir
+  - sudo
+  - dd
+  - format
+
+# Usage:
+# agentos run examples/quick-start.yaml --task "create a hello world Python script"

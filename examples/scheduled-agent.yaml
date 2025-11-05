@@ -1,0 +1,24 @@
+# AgentOS Scheduled Agent Example
+# Demonstrates time-based and recurring execution
+
+name: scheduled_assistant
+model_provider: github
+model_version: openai/gpt-4o-mini
+isolated: false
+
+# Schedule to run daily at 11 PM
+time: 23
+
+# Also repeat every 30 minutes
+repeat: 30
+
+# Security: Blocked commands
+DESTRUCTIVE_COMMANDS:
+  - rm
+  - rmdir
+  - sudo
+  - dd
+  - format
+# Usage:
+# agentos run examples/scheduled-agent.yaml --task "check system status and create daily report"
+# agentos schedule  # View scheduled agents

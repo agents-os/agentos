@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}AgentOS{% endblock %}
+
+{% block content %}
+<div x-data="runAgent()" class="flex flex-col flex-1">
+    <div class="page-header">
+        <h2 class="page-title">🚀 Run Agent</h2>
+    </div>
+    
+    <div class="form-container mb-4">
+        <form @submit.prevent="submitForm()">
+            <div class="form-group">
+                <label class="form-label">Manifest File</label>
+                <select x-model="form.manifest" class="form-select">
+                    <option value="">Select a manifest...</option>
+                    {% for manifest in manifests %}
+                    <option value="{{ manifest }}">{{ manifest }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Task</label>
+                <textarea 
+                    x-model="form.task" 
+                    placeholder="Enter the task for the agent to execute..."
+                    class="form-textarea"
+                    required
+                ></textarea>
+            </div>
+            
+            <div class="flex justify-between items-center">
+                <button 
+                    type="submit" 
+                    :disabled="loading"
+                    class="btn btn-primary"
+                    style="background: #1e40af; color: white; padding: 12px 24px;"
+                >
+                    <span x-show="!loading">🚀 Run Agent</span>
+                    <span x-show="loading">⏳ Starting...</span>
+                </button>
+                
+                <a href="/" class="btn-link">← Back to Dashboard</a>
+            </div>
+        </form>
+        
+        <!-- Success/Error Messages -->
+        <div x-show="message" class="mt-4 p-4 rounded border" :class="messageType === 'success' ? 'status-running' : 'status-failed'" style="display: block;">
+            <p x-text="message"></p>
+        </div>
+    </div>
+    
+    <!-- Quick Examples -->
+    <div class="form-container">
+        <h3 class="form-label">💡 Quick Examples</h3>
+        <div class="flex flex-col gap-3">
+            <button @click="setExample('create a Python script that prints hello world')" class="btn btn-primary text-left">
+                Create a Python hello world script
+            </button>
+            <button @click="setExample('analyze the current directory and create a summary report')" class="btn btn-primary text-left">
+                Analyze directory and create report
+            </button>
+            <button @click="setExample('create a simple web server using Python')" class="btn btn-primary text-left">
+                Create a simple web server
+            </button>
+            <button @click="setExample('check system status and create a log file')" class="btn btn-primary text-left">
+                System status check
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function runAgent() {
+    return {
+        form: {
+            manifest: 'default.yaml',
+            task: ''
+        },
+        loading: false,
+        message: '',
+        messageType: 'success',
+        
+        submitForm() {
+            if (!this.form.manifest || !this.form.task) {
+                this.showMessage('Please fill in all fields', 'error');
+                return;
+            }
+            
+            this.loading = true;
+            this.message = '';
+            
+            const formData = new FormData();
+            formData.append('manifest', this.form.manifest);
+            formData.append('task', this.form.task);
+            
+            fetch('/run-agent', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                this.loading = false;
+                if (data.success) {
+                    this.showMessage('Agent started successfully! Check the dashboard for status.', 'success');
+                    this.form.task = '';
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    this.showMessage('Failed to start agent: ' + data.error, 'error');
+                }
+            })
+            .catch(err => {
+                this.loading = false;
+                this.showMessage('Network error: ' + err.message, 'error');
+            });
+        },
+        
+        setExample(task) {
+            this.form.task = task;
+        },
+        
+        showMessage(msg, type) {
+            this.message = msg;
+            this.messageType = type;
+            setTimeout(() => {
+                this.message = '';
+            }, 5000);
+        }
+    }
+}
+</script>
+{% endblock %}

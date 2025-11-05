@@ -1,0 +1,21 @@
+# AgentOS Data Analysis Agent
+# Optimized for data processing and analysis tasks
+
+name: data_analyst
+model_provider: github
+model_version: openai/gpt-4o-mini
+isolated: true
+
+# Data analysis typically needs fewer restrictions
+DESTRUCTIVE_COMMANDS:
+  - rm
+  - rmdir
+  - sudo
+  - dd
+  - format
+  - shutdown
+  - reboot
+
+# Usage examples:
+# agentos run examples/data-analysis.yaml --task "analyze sales_data.csv and create a summary report"
+# agentos run examples/data-analysis.yaml --task "create visualizations from customer_data.json"

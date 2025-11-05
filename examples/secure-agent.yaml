@@ -1,0 +1,48 @@
+# AgentOS Secure Agent
+# Maximum security configuration for untrusted tasks
+
+name: secure_agent
+model_provider: github
+model_version: openai/gpt-4o-mini
+isolated: true  # Always use Docker isolation
+
+# Comprehensive security restrictions
+DESTRUCTIVE_COMMANDS:
+  - rm
+  - rmdir
+  - dd
+  - mkfs
+  - fdisk
+  - format
+  - del
+  - rd
+  - erase
+  - chown
+  - chmod
+  - truncate
+  - shred
+  - sudo
+  - su
+  - mv
+  - cp  # Can overwrite files
+  - rf
+  - kill
+  - killall
+  - pkill
+  - reboot
+  - shutdown
+  - halt
+  - poweroff
+  - mount
+  - umount
+  - crontab
+  - systemctl
+  - service
+  - wget
+  - curl  # Prevent network access
+  - ssh
+  - scp
+  - rsync
+
+# Usage:
+# agentos run examples/secure-agent.yaml --task "analyze this text file safely"
