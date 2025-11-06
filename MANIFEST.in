@@ -1,0 +1,10 @@
+include README.md
+include requirements.txt
+include LICENSE
+recursive-include agentos *.py
+recursive-include templates *.html
+recursive-include static *.css *.js
+recursive-include examples *.yaml
+recursive-include MD *.md
+include bin/agentos
+include bin/agentos.bat
