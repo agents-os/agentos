@@ -4,7 +4,6 @@ plan.md
 venv/
 __pycache__/
 *.pyc
-installer/
 .DS_Store
 *.db
 *.log
@@ -12,3 +11,4 @@ logs/
 build/
 agentos.egg-info/
 test/
+installer/install.py
