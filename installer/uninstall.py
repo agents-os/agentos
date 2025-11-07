@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """AgentOS Uninstaller"""
 
+import platform
 import shutil
 import subprocess
 import sys
@@ -15,6 +16,8 @@ def main():
         print("Uninstall cancelled.")
         return
     
+    is_windows = platform.system().lower() == "windows"
+    
     # Uninstall pip package
     print("\nUninstalling AgentOS package...")
     subprocess.run(f"{sys.executable} -m pip uninstall -y agentos", shell=True)
@@ -25,11 +28,17 @@ def main():
         print(f"Removing {install_dir}...")
         shutil.rmtree(install_dir)
     
-    # Remove desktop entry
-    desktop_file = Path.home() / ".local" / "share" / "applications" / "agentos.desktop"
-    if desktop_file.exists():
-        print("Removing application menu entry...")
-        desktop_file.unlink()
+    # Remove menu entry
+    if is_windows:
+        shortcut_file = Path.home() / "AppData" / "Roaming" / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "AgentOS.bat"
+        if shortcut_file.exists():
+            print("Removing Start Menu shortcut...")
+            shortcut_file.unlink()
+    else:
+        desktop_file = Path.home() / ".local" / "share" / "applications" / "agentos.desktop"
+        if desktop_file.exists():
+            print("Removing application menu entry...")
+            desktop_file.unlink()
     
     print("\n✅ AgentOS uninstalled successfully!")
 
