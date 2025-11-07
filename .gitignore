@@ -9,3 +9,6 @@ installer/
 *.db
 *.log
 logs/
+build/
+agentos.egg-info/
+test/
