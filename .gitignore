@@ -11,4 +11,4 @@ logs/
 build/
 agentos.egg-info/
 test/
-installer/install.py
+installer/

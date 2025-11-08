@@ -357,6 +357,6 @@ scrape_configs:
 
 ## Support
 
-- Documentation: https://docs.agentos.dev
-- Issues: https://github.com/agentos/agentos/issues
-- Community: https://discord.gg/agentos
+- Purchase: https://agentos.sellfy.store/
+- Repository: https://github.com/agents-os/agentos
+- Issues: https://github.com/agents-os/agentos/issues

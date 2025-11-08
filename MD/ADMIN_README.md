@@ -54,8 +54,8 @@ agentos/
 
 1. **Clone Repository**
 ```bash
-git clone <repository-url>
-cd AgentOS
+git clone https://github.com/agents-os/agentos
+cd agentos
 ```
 
 2. **Create Virtual Environment**

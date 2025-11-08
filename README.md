@@ -10,8 +10,15 @@ AgentOS is a production-ready runtime for autonomous AI agents with built-in mem
 
 ### Installation
 
+Purchase and download from: **https://agentos.sellfy.store/**
+
+Then run the installer:
 ```bash
-pip install agentos
+# Linux
+python3 install_linux.py
+
+# Windows
+python install_windows.py
 ```
 
 ### Basic Usage
@@ -188,7 +195,7 @@ Prevents command injection:
 
 ### Local Setup
 ```bash
-git clone https://github.com/agentos/agentos
+git clone https://github.com/agents-os/agentos
 cd agentos
 python -m venv .venv
 source .venv/bin/activate
@@ -220,9 +227,9 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/agentos/agentos/issues)
-- **Documentation**: [docs.agentos.dev](https://docs.agentos.dev)
-- **Community**: [Discord](https://discord.gg/agentos)
+- **Purchase**: [https://agentos.sellfy.store/](https://agentos.sellfy.store/)
+- **Repository**: [https://github.com/agents-os/agentos](https://github.com/agents-os/agentos)
+- **Issues**: [GitHub Issues](https://github.com/agents-os/agentos/issues)
 
 ---
 
