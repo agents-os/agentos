@@ -5,8 +5,16 @@ Main entrypoint for CLI + Daemon
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
+
+# Fix Windows Unicode issues
+if sys.platform == "win32":
+    os.environ["PYTHONIOENCODING"] = "utf-8"
+    import codecs
+    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
 
 from rich.console import Console
 

@@ -1,0 +1,10 @@
+abdulhadi@abdulhadi-VirtualBox:~/Desktop$ apt install python3-typing_extensions
+E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)
+E: Unable to acquire the dpkg frontend lock (/var/lib/dpkg/lock-frontend), are you root?
+abdulhadi@abdulhadi-VirtualBox:~/Desktop$ sudo apt install python3-typing_extensions
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+E: Unable to locate package python3-typing_extensions
+abdulhadi@abdulhadi-VirtualBox:~/Desktop$ 
+
