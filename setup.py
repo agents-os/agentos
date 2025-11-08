@@ -28,7 +28,7 @@ setup(
     author="AgentOS Team",
     author_email="support@agentos.com",
     url="https://github.com/agents-os/agentos",
-    download_url="https://agentos.sellfy.store/",
+    download_url="https://junaidahmed65.gumroad.com/l/spfzuo",
     packages=find_packages(),
     include_package_data=True,
     install_requires=requirements,

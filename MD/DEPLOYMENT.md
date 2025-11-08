@@ -357,6 +357,6 @@ scrape_configs:
 
 ## Support
 
-- Purchase: https://agentos.sellfy.store/
+- Purchase: https://junaidahmed65.gumroad.com/l/spfzuo
 - Repository: https://github.com/agents-os/agentos
 - Issues: https://github.com/agents-os/agentos/issues

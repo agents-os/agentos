@@ -2,7 +2,7 @@
 
 ## Purchase
 
-Get AgentOS from: **https://agentos.sellfy.store/**
+Get AgentOS from: **https://junaidahmed65.gumroad.com/l/spfzuo**
 
 ## Installation
 

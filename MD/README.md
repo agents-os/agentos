@@ -10,7 +10,7 @@ AgentOS is a production-ready runtime for autonomous AI agents with built-in mem
 
 ### Installation
 
-Purchase and download from: **https://agentos.sellfy.store/**
+Purchase and download from: **https://junaidahmed65.gumroad.com/l/spfzuo**
 
 Then run the installer:
 ```bash
@@ -227,7 +227,7 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ## 📞 Support
 
-- **Purchase**: [https://agentos.sellfy.store/](https://agentos.sellfy.store/)
+- **Purchase**: [https://junaidahmed65.gumroad.com/l/spfzuo](https://junaidahmed65.gumroad.com/l/spfzuo)
 - **Repository**: [https://github.com/agents-os/agentos](https://github.com/agents-os/agentos)
 - **Issues**: [GitHub Issues](https://github.com/agents-os/agentos/issues)
 
