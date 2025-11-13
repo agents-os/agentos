@@ -6,9 +6,9 @@ import re
 import time
 from typing import List, Tuple
 
-from agentos.llm import answerer
 from agentos.core import utils
 from agentos.core.utils import SYSTEM_PROMPT
+from agentos.llm import answerer
 
 logger = logging.getLogger(__name__)
 
@@ -17,45 +17,63 @@ def ask_llm(system_prompt: str, user_prompt: str, max_retries: int = 3) -> str:
     """Ask LLM with retry logic and error handling"""
     provider = utils.PROVIDER.lower()
     model = utils.MODEL
-    
+
     for attempt in range(max_retries):
         try:
             logger.debug(f"LLM request (attempt {attempt + 1}): {provider}/{model}")
-            
+
             if provider == "ollama":
                 return answerer.get_ollama_response(
-                    query=user_prompt, system_prompt=system_prompt, model=model, temperature=0.1
+                    query=user_prompt,
+                    system_prompt=system_prompt,
+                    model=model,
+                    temperature=0.1,
                 )
             elif provider == "openai":
                 return answerer.get_openai_response(
-                    query=user_prompt, system_prompt=system_prompt, model=model, temperature=0.1
+                    query=user_prompt,
+                    system_prompt=system_prompt,
+                    model=model,
+                    temperature=0.1,
                 )
             elif provider == "claude":
                 return answerer.get_claude_response(
-                    query=user_prompt, system_prompt=system_prompt, model=model, temperature=0.1
+                    query=user_prompt,
+                    system_prompt=system_prompt,
+                    model=model,
+                    temperature=0.1,
                 )
             elif provider == "cohere":
                 return answerer.get_cohere_response(
-                    query=user_prompt, system_prompt=system_prompt, model=model, temperature=0.1
+                    query=user_prompt,
+                    system_prompt=system_prompt,
+                    model=model,
+                    temperature=0.1,
                 )
             elif provider == "gemini":
                 return answerer.get_gemini_response(
-                    query=user_prompt, system_prompt=system_prompt, model=model, temperature=0.1
+                    query=user_prompt,
+                    system_prompt=system_prompt,
+                    model=model,
+                    temperature=0.1,
                 )
             elif provider == "github":
                 return answerer.get_github_response(
-                    query=user_prompt, system_prompt=system_prompt, model=model, temperature=0.1
+                    query=user_prompt,
+                    system_prompt=system_prompt,
+                    model=model,
+                    temperature=0.1,
                 )
             else:
                 raise ValueError(f"Unsupported provider: {provider}")
-                
+
         except Exception as e:
             logger.warning(f"LLM request failed (attempt {attempt + 1}): {e}")
             if attempt == max_retries - 1:
                 logger.error(f"All LLM attempts failed for provider {provider}")
                 raise
-            time.sleep(2 ** attempt)
-    
+            time.sleep(2**attempt)
+
     raise RuntimeError("LLM request failed after all retries")
 
 

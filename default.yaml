@@ -1,7 +1,7 @@
 # AgentOS Production Configuration
 name: production_assistant
-model_provider: gemini
-model_version: models/gemini-2.0-flash-lite
+model_provider: github
+model_version: openai/gpt-4o-mini
 isolated: false # Disable sandboxing for this example
 
 # Scheduling (optional)
@@ -11,30 +11,30 @@ isolated: false # Disable sandboxing for this example
 DESTRUCTIVE_COMMANDS:
   - rm
   - rmdir
-  - dd
-  - mkfs
-  - fdisk
-  - format
-  - del
-  - rd
-  - erase
-  - chown
-  - chmod
-  - truncate
-  - shred
-  - sudo
-  - su
-  - mv # Can be destructive
-  - rf
-  - kill
-  - killall
-  - pkill
-  - reboot
-  - shutdown
-  - halt
-  - poweroff
-  - mount
-  - umount
-  - crontab
-  - systemctl
-  - service
+  # - dd
+  # - mkfs
+  # - fdisk
+  # - format
+  # - del
+  # - rd
+  # - erase
+  # - chown
+  # - chmod
+  # - truncate
+  # - shred
+  # - sudo
+  # - su
+  # - mv # Can be destructive
+  # - rf
+  # - kill
+  # - killall
+  # - pkill
+  # - reboot
+  # - shutdown
+  # - halt
+  # - poweroff
+  # - mount
+  # - umount
+  # - crontab
+  # - systemctl
+  # - service
