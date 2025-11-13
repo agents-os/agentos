@@ -1,4 +1,4 @@
-"""Agent Command Execution Module"""
+"""Safe Agent Command Execution with Python Script Handling"""
 
 import logging
 import os
@@ -21,22 +21,21 @@ SAFE_COMMANDS = (
     "ls",
     "touch",
     "mkdir",
+    "cp",
+    "mv",
     "grep",
     "head",
     "tail",
     "pwd",
     "find",
     "chmod",
-    "/usr/bin/python3",
-    "/usr/bin/python",
-    "./",
 )
 
 
 def execute_command(
     command: str, simulate: bool = False, timeout: int = 30
 ) -> Tuple[int, str]:
-    """Execute a command safely with timeout, sandbox, and security checks."""
+    """Execute CLI commands safely, using whitelisted commands and Python execution for scripts."""
 
     if not command or not command.strip():
         return 1, "ERROR: Empty command"
@@ -44,20 +43,19 @@ def execute_command(
     command = command.strip()
     cmd_lower = command.lower()
 
-    # --- Security Layer 1: Block destructive commands ---
+    # --- Block destructive commands ---
     cmd_parts = re.split(r"\s+", cmd_lower)
     if any(d in cmd_parts for d in DESTRUCTIVE_COMMANDS):
         logger.warning(f"Blocked destructive command: {command}")
         return 1, f"ERROR: Destructive command blocked: {command}"
 
-    # --- Security Layer 2: Block command chaining/injection ---
+    # --- Block unsafe command chaining ---
     if any(sym in command for sym in [";", "&&", "||", "|&"]):
         logger.warning(f"Blocked unsafe chained command: {command}")
         return 1, f"ERROR: Unsafe command chaining detected: {command}"
 
-    # --- Security Layer 3: Command substitution & variable expansion ---
+    # --- Block command substitution & untrusted expansions ---
     if any(sym in command for sym in ["`", "$("]):
-        # Allow only for whitelisted safe commands
         if not any(command.strip().startswith(safe) for safe in SAFE_COMMANDS):
             if re.search(r"`[^`]+`|\$\([^)]*\)", command):
                 logger.warning(f"Blocked command substitution: {command}")
@@ -67,7 +65,7 @@ def execute_command(
     if timeout <= 0 or timeout > 300:
         timeout = 30
 
-    # --- Handle isolated container execution (if enabled) ---
+    # --- Handle isolated execution ---
     if utils.ISOLATED:
         try:
             from agentos.core.isolate import run_in_agentos
@@ -79,7 +77,7 @@ def execute_command(
             logger.error(f"Container execution failed: {e}")
             return 1, f"Container error: {e}"
 
-    # --- Simulation mode for LLMs ---
+    # --- Simulation mode ---
     if simulate:
         try:
             time.sleep(0.5)
@@ -96,10 +94,9 @@ def execute_command(
 
     # --- Actual command execution ---
     try:
-        # Only allow commands that start with SAFE_COMMANDS
-        if not any(command.startswith(safe) for safe in SAFE_COMMANDS):
-            logger.warning(f"Blocked non-whitelisted command: {command}")
-            return 1, f"ERROR: Command not allowed: {command}"
+        # If the command is a Python script, run it explicitly via python3
+        if command.endswith(".py"):
+            command = f"/usr/bin/python3 {command}"
 
         logger.info(f"Executing command: {command}")
         process = subprocess.Popen(
@@ -114,12 +111,13 @@ def execute_command(
 
         try:
             output, _ = process.communicate(timeout=timeout)
-            return process.returncode, output.strip() if output else ""
         except subprocess.TimeoutExpired:
             process.kill()
-            process.communicate()
+            output, _ = process.communicate()
             logger.error(f"Command timed out after {timeout}s: {command}")
-            return 124, f"Command timed out after {timeout} seconds"
+            return 124, "Command timed out"
+
+        return process.returncode, output.strip() if output else ""
 
     except FileNotFoundError:
         logger.error(f"Command not found: {command}")
