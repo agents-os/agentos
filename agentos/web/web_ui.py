@@ -8,10 +8,15 @@ from pathlib import Path
 
 from flask import Flask
 
+from agentos.core import path_resolver
+
 # Find project root (where templates/ and static/ are located)
-project_root = Path(__file__).parent.parent.parent
-template_folder = project_root / 'templates'
-static_folder = project_root / 'static'
+template_folder = path_resolver.get_templates_dir()
+static_folder = path_resolver.get_static_dir()
+
+# Ensure directories exist
+template_folder.mkdir(parents=True, exist_ok=True)
+static_folder.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__, 
             template_folder=str(template_folder),

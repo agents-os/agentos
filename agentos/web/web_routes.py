@@ -8,6 +8,7 @@ from flask import render_template, request, jsonify
 
 from agentos.database import db
 from agentos.core.scheduler import scheduler
+from agentos.core import path_resolver
 
 
 def register_routes(app):
@@ -69,11 +70,28 @@ def register_routes(app):
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
         
+        # Discover manifests from multiple locations
         manifests = []
-        for yaml_file in Path('.').glob('*.yaml'):
-            manifests.append(str(yaml_file))
-        for yaml_file in Path('examples').glob('*.yaml'):
-            manifests.append(str(yaml_file))
+        manifest_dirs = [
+            Path.cwd(),  # Current working directory
+            Path.home(),  # Home directory
+            Path(__file__).parent.parent.parent,  # Project root
+        ]
+        
+        for manifest_dir in manifest_dirs:
+            if manifest_dir.exists():
+                for yaml_file in manifest_dir.glob('*.yaml'):
+                    manifest_str = str(yaml_file)
+                    if manifest_str not in manifests:
+                        manifests.append(manifest_str)
+        
+        # Also check examples directory
+        examples_dir = Path(__file__).parent.parent.parent / 'examples'
+        if examples_dir.exists():
+            for yaml_file in examples_dir.glob('*.yaml'):
+                manifest_str = str(yaml_file)
+                if manifest_str not in manifests:
+                    manifests.append(manifest_str)
         
         return render_template('run_agent.html', manifests=manifests)
 

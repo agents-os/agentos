@@ -4,7 +4,7 @@
 name: quick_start_agent
 model_provider: github
 model_version: openai/gpt-4o-mini
-isolated: true
+isolated: false
 
 # Optional: Custom blocked commands (inherits defaults)
 DESTRUCTIVE_COMMANDS:
@@ -13,6 +13,5 @@ DESTRUCTIVE_COMMANDS:
   - sudo
   - dd
   - format
-
 # Usage:
 # agentos run examples/quick-start.yaml --task "create a hello world Python script"

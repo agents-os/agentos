@@ -36,14 +36,19 @@ def cmd_run(args):
             console.print("[red]❌ No task specified. Use --task 'your task here'[/red]")
             sys.exit(1)
 
-        manifest_path = Path(args.manifest)
+        # Resolve manifest path - support both absolute and relative paths
+        manifest_path = Path(args.manifest).resolve()
         if not manifest_path.exists():
-            console.print(f"[red]❌ Manifest file not found: {args.manifest}[/red]")
-            if Confirm.ask("Would you like to create a default manifest?"):
-                from agentos.cli.cli_helpers import create_default_manifest
-                create_default_manifest(args.manifest)
-            else:
-                sys.exit(1)
+            # Try relative to current working directory
+            manifest_path = Path.cwd() / args.manifest
+            if not manifest_path.exists():
+                console.print(f"[red]❌ Manifest file not found: {args.manifest}[/red]")
+                console.print(f"[dim]Searched in: {Path(args.manifest).resolve()}[/dim]")
+                if Confirm.ask("Would you like to create a default manifest?"):
+                    from agentos.cli.cli_helpers import create_default_manifest
+                    create_default_manifest(str(manifest_path))
+                else:
+                    sys.exit(1)
 
         with console.status("[bold blue]Setting up agent...", spinner="dots"):
             from agentos.cli.cli_helpers import load_manifest

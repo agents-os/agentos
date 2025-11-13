@@ -42,7 +42,8 @@ def execute_command(command: str, simulate: bool = False, timeout: int = 30) -> 
     
     if utils.ISOLATED:
         try:
-            from isolate import run_in_agentos
+            # Use fully-qualified import to avoid module resolution issues in subprocesses
+            from agentos.core.isolate import run_in_agentos
             logger.info(f"Executing in container: {command}")
             output = run_in_agentos(command)
             return 0, output.strip()
