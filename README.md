@@ -10,7 +10,7 @@ AgentOS is a production-ready runtime for autonomous AI agents with built-in mem
 
 ### Installation
 
-Purchase and download from: **https://junaidahmed65.gumroad.com/l/spfzuo**
+<!-- Purchase and download from: **https://junaidahmed65.gumroad.com/l/spfzuo**  --> 
 
 Then run the installer:
 ```bash
