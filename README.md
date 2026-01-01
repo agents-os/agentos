@@ -9,8 +9,8 @@ AgentOS is a production-ready runtime for autonomous AI agents with built-in mem
 ## 🎬 Demo
 
 <video controls width="720">
-  <source src="assets/basic-tests.webm" type="video/webm">
-  Your browser does not support the video tag — you can download the video: [assets/basic-tests.webm](assets/basic-tests.webm)
+  <source src="assets/basic-chat.mp4" type="video/mp4">
+  Your browser does not support the video tag — you can download the video: [assets/basic-chat.mp4](assets/basic-chat.mp4)
 </video>
 
 ## 🚀 Quick Start
@@ -296,6 +296,7 @@ MIT License - see [LICENSE](LICENSE) file.
 ## 📞 Support
 
 <!-- - **Purchase**: [https://junaidahmed65.gumroad.com/l/spfzuo](https://junaidahmed65.gumroad.com/l/spfzuo) -->
+
 - **Repository**: [https://github.com/agents-os/agentos](https://github.com/agents-os/agentos)
 - **Issues**: [GitHub Issues](https://github.com/agents-os/agentos/issues)
 
