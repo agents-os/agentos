@@ -288,7 +288,7 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ## 📞 Support
 
-- **Purchase**: [https://junaidahmed65.gumroad.com/l/spfzuo](https://junaidahmed65.gumroad.com/l/spfzuo)
+<!-- - **Purchase**: [https://junaidahmed65.gumroad.com/l/spfzuo](https://junaidahmed65.gumroad.com/l/spfzuo) -->
 - **Repository**: [https://github.com/agents-os/agentos](https://github.com/agents-os/agentos)
 - **Issues**: [GitHub Issues](https://github.com/agents-os/agentos/issues)
 
