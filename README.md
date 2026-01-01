@@ -6,11 +6,18 @@
 
 AgentOS is a production-ready runtime for autonomous AI agents with built-in memory management, safe tool sandboxing, and multi-provider LLM support.
 
+## 🎬 Demo
+
+<video controls width="720">
+  <source src="assets/basic-tests.webm" type="video/webm">
+  Your browser does not support the video tag — you can download the video: [assets/basic-tests.webm](assets/basic-tests.webm)
+</video>
+
 ## 🚀 Quick Start
 
 ### Installation
 
-<!-- Purchase and download from: **https://junaidahmed65.gumroad.com/l/spfzuo**  --> 
+<!-- Purchase and download from: **https://junaidahmed65.gumroad.com/l/spfzuo**  -->
 
 Then run the installer:
 
