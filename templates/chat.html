@@ -1,0 +1,354 @@
+{% extends "base.html" %} {% block title %}Chat - AgentOS{% endblock %} {% block
+content %}
+<div x-data="chatApp()" x-init="init()" class="chat-container">
+  <!-- Chat Header -->
+  <div class="chat-header">
+    <div class="flex items-center gap-3">
+      <h2 class="text-xl font-bold text-gray-100">💬 Agentic Chat</h2>
+      <span class="badge-agentic">⚡ Can execute commands</span>
+    </div>
+
+    <!-- Settings -->
+    <div class="flex items-center gap-3">
+      <select x-model="provider" class="form-select">
+        {% for p in providers %}
+        <option value="{{ p }}">{{ p }}</option>
+        {% endfor %}
+      </select>
+
+      <input
+        x-model="model"
+        type="text"
+        placeholder="Model (optional)"
+        class="form-input"
+        style="max-width: 150px"
+      />
+
+      <input
+        x-model="temperature"
+        type="number"
+        min="0"
+        max="2"
+        step="0.1"
+        class="form-input"
+        style="max-width: 80px"
+        title="Temperature"
+      />
+
+      <button @click="clearChat()" class="btn btn-secondary">🗑️ Clear</button>
+    </div>
+  </div>
+
+  <!-- Messages Area -->
+  <div class="chat-messages" x-ref="messagesContainer">
+    <template x-if="messages.length === 0">
+      <div class="chat-empty">
+        <div class="text-4xl mb-3">🤖</div>
+        <p class="text-gray-400 text-lg">Agentic Chat</p>
+        <p class="text-gray-500 text-sm mt-2">
+          Ask me to perform tasks - I can execute commands!
+        </p>
+        <p class="text-gray-600 text-xs mt-1">
+          Examples: "delete tests.py from tests folder", "create a hello.txt
+          file", "list files"
+        </p>
+      </div>
+    </template>
+
+    <template x-for="(msg, index) in messages" :key="index">
+      <div :class="getMessageClass(msg.role)">
+        <div class="chat-message-header">
+          <span
+            class="chat-message-role"
+            x-text="getRoleLabel(msg.role)"
+          ></span>
+          <span
+            class="chat-message-time"
+            x-text="formatTime(msg.timestamp)"
+          ></span>
+        </div>
+        <div
+          class="chat-message-content"
+          x-html="formatMessage(msg.content)"
+        ></div>
+
+        <!-- Show execute buttons for commands in assistant messages (hide after executed) -->
+        <template
+          x-if="msg.role === 'assistant' && msg.commands && msg.commands.length > 0 && !msg.executed"
+        >
+          <div class="command-actions">
+            <template x-for="(cmd, cmdIdx) in msg.commands" :key="cmdIdx">
+              <div class="command-item">
+                <code class="command-code" x-text="cmd"></code>
+                <button
+                  @click="executeCommand(cmd, index)"
+                  class="btn btn-execute"
+                  :disabled="isExecuting"
+                >
+                  ▶️ Execute
+                </button>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- Execution result -->
+    <template x-if="executionResult">
+      <div class="chat-message-system">
+        <div class="chat-message-header">
+          <span class="chat-message-role">⚙️ Execution Result</span>
+        </div>
+        <div class="chat-message-content">
+          <div :class="executionResult.success ? 'exec-success' : 'exec-error'">
+            <strong
+              x-text="executionResult.success ? '✅ Success' : '❌ Failed'"
+            ></strong>
+            <pre class="exec-output" x-text="executionResult.output"></pre>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template x-if="isThinking">
+      <div class="chat-message-assistant">
+        <div class="chat-message-header">
+          <span class="chat-message-role">🤖 Assistant</span>
+        </div>
+        <div class="chat-message-content">
+          <div class="thinking-indicator">
+            <span>Thinking</span>
+            <span class="thinking-dots">
+              <span>.</span><span>.</span><span>.</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template x-if="isExecuting">
+      <div class="chat-message-system">
+        <div class="chat-message-header">
+          <span class="chat-message-role">⚙️ Executing</span>
+        </div>
+        <div class="chat-message-content">
+          <div class="thinking-indicator">
+            <span>Running command</span>
+            <span class="thinking-dots">
+              <span>.</span><span>.</span><span>.</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Input Area -->
+  <div class="chat-input-container">
+    <form @submit.prevent="sendMessage()" class="chat-input-form">
+      <textarea
+        x-model="inputMessage"
+        @keydown.enter.prevent="if(!$event.shiftKey) sendMessage()"
+        placeholder="Ask me to do something... (e.g., 'delete tests.py from tests folder')"
+        class="chat-input"
+        rows="3"
+        :disabled="isThinking || isExecuting"
+      ></textarea>
+      <button
+        type="submit"
+        class="btn btn-primary"
+        :disabled="isThinking || isExecuting || !inputMessage.trim()"
+      >
+        <span x-show="!isThinking">Send 🚀</span>
+        <span x-show="isThinking">Sending...</span>
+      </button>
+    </form>
+    <div x-show="error" class="chat-error" x-text="error"></div>
+  </div>
+</div>
+
+<script>
+  function chatApp() {
+    return {
+      messages: [],
+      inputMessage: "",
+      provider: "github",
+      model: "",
+      temperature: 0.7,
+      isThinking: false,
+      isExecuting: false,
+      error: "",
+
+      init() {
+        this.loadHistory();
+      },
+
+      async loadHistory() {
+        try {
+          const response = await fetch("/api/chat/history");
+          const data = await response.json();
+          this.messages = data.history || [];
+          this.$nextTick(() => this.scrollToBottom());
+        } catch (err) {
+          console.error("Failed to load history:", err);
+        }
+      },
+
+      async sendMessage() {
+        if (!this.inputMessage.trim() || this.isThinking) return;
+
+        const message = this.inputMessage.trim();
+        this.inputMessage = "";
+        this.error = "";
+
+        // Add user message
+        this.messages.push({
+          role: "user",
+          content: message,
+          timestamp: new Date().toISOString(),
+        });
+
+        this.isThinking = true;
+        this.$nextTick(() => this.scrollToBottom());
+
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: message,
+              provider: this.provider,
+              model: this.model,
+              temperature: this.temperature,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.error) {
+            this.error = data.error;
+            this.messages.pop();
+          } else {
+            // Add assistant response with commands
+            this.messages.push({
+              role: "assistant",
+              content: data.response,
+              timestamp: new Date().toISOString(),
+              commands: data.commands || [],
+            });
+          }
+        } catch (err) {
+          this.error = "Failed to send message: " + err.message;
+          this.messages.pop();
+        } finally {
+          this.isThinking = false;
+          this.$nextTick(() => this.scrollToBottom());
+        }
+      },
+
+      async executeCommand(command, msgIndex) {
+        this.isExecuting = true;
+        this.$nextTick(() => this.scrollToBottom());
+
+        try {
+          const response = await fetch("/api/chat/execute", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ command: command }),
+          });
+
+          const data = await response.json();
+
+          // Mark the message as executed so button disappears
+          if (msgIndex >= 0 && msgIndex < this.messages.length) {
+            this.messages[msgIndex].executed = true;
+          }
+
+          // Add execution result as a system message
+          this.messages.push({
+            role: "system",
+            content: `**Executed:** \`${command}\`\n**Result:** ${
+              data.success ? "✅ Success" : "❌ Failed"
+            }\n\`\`\`\n${data.output || data.error || "(no output)"}\n\`\`\``,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (err) {
+          // Mark as executed even on error
+          if (msgIndex >= 0 && msgIndex < this.messages.length) {
+            this.messages[msgIndex].executed = true;
+          }
+          // Add error as system message
+          this.messages.push({
+            role: "system",
+            content: `**Executed:** \`${command}\`\n**Result:** ❌ Failed\n\`\`\`\n${err.message}\n\`\`\``,
+            timestamp: new Date().toISOString(),
+          });
+        } finally {
+          this.isExecuting = false;
+          this.$nextTick(() => this.scrollToBottom());
+        }
+      },
+
+      async clearChat() {
+        if (!confirm("Clear all messages?")) return;
+
+        try {
+          await fetch("/api/chat/clear", { method: "POST" });
+          this.messages = [];
+          this.error = "";
+        } catch (err) {
+          this.error = "Failed to clear chat: " + err.message;
+        }
+      },
+
+      scrollToBottom() {
+        this.$refs.messagesContainer.scrollTop =
+          this.$refs.messagesContainer.scrollHeight;
+      },
+
+      formatTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString();
+      },
+
+      getMessageClass(role) {
+        if (role === "user") return "chat-message-user";
+        if (role === "system") return "chat-message-system";
+        return "chat-message-assistant";
+      },
+
+      getRoleLabel(role) {
+        if (role === "user") return "👤 You";
+        if (role === "system") return "⚙️ System";
+        return "🤖 Assistant";
+      },
+
+      formatMessage(content) {
+        let formatted = content
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\n/g, "<br>")
+          .replace(/`([^`]+)`/g, "<code>$1</code>")
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+          .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+        // Format code blocks
+        formatted = formatted.replace(
+          /```(\w+)?<br>([\s\S]*?)```/g,
+          function (match, lang, code) {
+            return "<pre><code>" + code + "</code></pre>";
+          }
+        );
+
+        return formatted;
+      },
+    };
+  }
+</script>
+{% endblock %}

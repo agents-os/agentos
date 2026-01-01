@@ -1,75 +1,175 @@
 """Web UI Routes for AgentOS"""
 
 import json
+import os
+import re
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from flask import render_template, request, jsonify
+from flask import jsonify, render_template, request, session
 
-from agentos.database import db
-from agentos.core.scheduler import scheduler
 from agentos.core import path_resolver
+from agentos.core.scheduler import scheduler
+from agentos.database import db
+from agentos.llm.answerer import (
+    get_claude_response,
+    get_cohere_response,
+    get_gemini_response,
+    get_github_response,
+    get_ollama_response,
+    get_openai_response,
+)
+
+# Provider mapping
+CHAT_PROVIDERS = {
+    "github": get_github_response,
+    "gemini": get_gemini_response,
+    "cohere": get_cohere_response,
+    "openai": get_openai_response,
+    "claude": get_claude_response,
+    "ollama": get_ollama_response,
+}
+
+PROVIDER_MODELS = {
+    "github": "openai/gpt-4o-mini",
+    "gemini": "models/gemini-2.0-flash-lite",
+    "cohere": "command-xlarge-nightly",
+    "openai": "gpt-4o-mini",
+    "claude": "claude-3-5-haiku-20241022",
+    "ollama": "phi3",
+}
+
+# Agentic system prompt for web chat
+AGENTIC_SYSTEM_PROMPT = """You are an AI assistant with the ability to execute shell commands on the user's system.
+
+When the user asks you to perform a task that requires running commands (like creating files, deleting files, installing packages, etc.), provide the command in a bash code block like this:
+
+```bash
+command here
+```
+
+The system will automatically detect and execute these commands. After execution, you'll see the results.
+
+Be helpful and when a task requires a command, always provide it in the proper format so it can be executed.
+Keep your responses concise and action-oriented."""
+
+
+def run_shell_command(command: str, timeout: int = 60):
+    """Execute a shell command and return the result."""
+    if not command or not command.strip():
+        return {"success": False, "output": "Empty command"}
+
+    command = command.strip()
+
+    # Block dangerous commands
+    dangerous = ["rm -rf /", "rm -rf ~", "mkfs", "dd if=", ":(){", "fork bomb"]
+    if any(d in command.lower() for d in dangerous):
+        return {"success": False, "output": "Dangerous command blocked"}
+
+    try:
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=True,
+            text=True,
+            cwd=os.getcwd(),
+            env=os.environ.copy(),
+        )
+
+        try:
+            output, _ = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            return {"success": False, "output": "Command timed out"}
+
+        return {
+            "success": process.returncode == 0,
+            "output": output.strip() if output else "(no output)",
+            "returncode": process.returncode,
+        }
+    except Exception as e:
+        return {"success": False, "output": str(e)}
+
+
+def extract_commands(response: str):
+    """Extract bash commands from response."""
+    pattern = r"```(?:bash|sh|shell)?\s*\n(.*?)```"
+    matches = re.findall(pattern, response, re.DOTALL | re.IGNORECASE)
+    commands = []
+    for match in matches:
+        for line in match.strip().split("\n"):
+            line = line.strip()
+            if line and not line.startswith("#"):
+                commands.append(line)
+    return commands
 
 
 def register_routes(app):
     """Register all routes with the Flask app"""
 
-    @app.route('/')
+    @app.route("/")
     def dashboard():
         """Main dashboard showing agents and schedules"""
         agents = db.list_agents()
         scheduled_dict = scheduler.list_scheduled()
-        scheduled = [{'id': k, **v} for k, v in scheduled_dict.items()]
-        
-        running_count = len([a for a in agents if a.get('status') == 'running'])
-        completed_count = len([a for a in agents if a.get('status') == 'completed'])
-        failed_count = len([a for a in agents if a.get('status') == 'failed'])
-        
-        return render_template('dashboard.html', 
-                             agents=agents,
-                             scheduled=scheduled,
-                             stats={
-                                 'running': running_count,
-                                 'completed': completed_count,
-                                 'failed': failed_count,
-                                 'total': len(agents)
-                             })
+        scheduled = [{"id": k, **v} for k, v in scheduled_dict.items()]
 
-    @app.route('/agents')
+        running_count = len([a for a in agents if a.get("status") == "running"])
+        completed_count = len([a for a in agents if a.get("status") == "completed"])
+        failed_count = len([a for a in agents if a.get("status") == "failed"])
+
+        return render_template(
+            "dashboard.html",
+            agents=agents,
+            scheduled=scheduled,
+            stats={
+                "running": running_count,
+                "completed": completed_count,
+                "failed": failed_count,
+                "total": len(agents),
+            },
+        )
+
+    @app.route("/agents")
     def agents():
         """Agents management page"""
         agents = db.list_agents()
-        return render_template('agents.html', agents=agents)
+        return render_template("agents.html", agents=agents)
 
-    @app.route('/schedule')
+    @app.route("/schedule")
     def schedule():
         """Schedule management page"""
         scheduled_dict = scheduler.list_scheduled()
-        scheduled = [{'id': k, **v} for k, v in scheduled_dict.items()]
-        return render_template('schedule.html', scheduled=scheduled)
+        scheduled = [{"id": k, **v} for k, v in scheduled_dict.items()]
+        return render_template("schedule.html", scheduled=scheduled)
 
-    @app.route('/create-manifest')
+    @app.route("/create-manifest")
     def create_manifest():
         """Create manifest page"""
-        return render_template('create_manifest.html')
+        return render_template("create_manifest.html")
 
-    @app.route('/run-agent', methods=['GET', 'POST'])
+    @app.route("/run-agent", methods=["GET", "POST"])
     def run_agent():
         """Run agent form"""
-        if request.method == 'POST':
-            manifest = request.form.get('manifest', 'default.yaml')
-            task = request.form.get('task', '')
-            
+        if request.method == "POST":
+            manifest = request.form.get("manifest", "default.yaml")
+            task = request.form.get("task", "")
+
             if not task:
-                return jsonify({'error': 'Task is required'}), 400
-            
+                return jsonify({"error": "Task is required"}), 400
+
             try:
                 from agentos.cli.cli_helpers import run_agent_background
+
                 run_agent_background(manifest, task)
-                return jsonify({'success': True, 'message': 'Agent started successfully'})
+                return jsonify(
+                    {"success": True, "message": "Agent started successfully"}
+                )
             except Exception as e:
-                return jsonify({'error': str(e)}), 500
-        
+                return jsonify({"error": str(e)}), 500
+
         # Discover manifests from multiple locations
         manifests = []
         manifest_dirs = [
@@ -77,116 +177,234 @@ def register_routes(app):
             Path.home(),  # Home directory
             Path(__file__).parent.parent.parent,  # Project root
         ]
-        
+
         for manifest_dir in manifest_dirs:
             if manifest_dir.exists():
-                for yaml_file in manifest_dir.glob('*.yaml'):
+                for yaml_file in manifest_dir.glob("*.yaml"):
                     manifest_str = str(yaml_file)
                     if manifest_str not in manifests:
                         manifests.append(manifest_str)
-        
+
         # Also check examples directory
-        examples_dir = Path(__file__).parent.parent.parent / 'examples'
+        examples_dir = Path(__file__).parent.parent.parent / "examples"
         if examples_dir.exists():
-            for yaml_file in examples_dir.glob('*.yaml'):
+            for yaml_file in examples_dir.glob("*.yaml"):
                 manifest_str = str(yaml_file)
                 if manifest_str not in manifests:
                     manifests.append(manifest_str)
-        
-        return render_template('run_agent.html', manifests=manifests)
 
-    @app.route('/api/agents')
+        return render_template("run_agent.html", manifests=manifests)
+
+    @app.route("/chat")
+    def chat():
+        """Chat interface page"""
+        # Initialize session for chat history if not exists
+        if "chat_history" not in session:
+            session["chat_history"] = []
+
+        return render_template(
+            "chat.html",
+            providers=["github", "gemini", "cohere", "openai", "claude", "ollama"],
+        )
+
+    @app.route("/api/chat", methods=["POST"])
+    def api_chat():
+        """API endpoint for chat"""
+        try:
+            data = request.get_json()
+            message = data.get("message", "").strip()
+            provider = data.get("provider", "github")
+            model = data.get("model", "")
+            temperature = float(data.get("temperature", 0.7))
+
+            if not message:
+                return jsonify({"error": "Message is required"}), 400
+
+            # Get the appropriate response function
+            response_func = CHAT_PROVIDERS.get(provider)
+            if not response_func:
+                return jsonify({"error": f"Provider {provider} not supported"}), 400
+
+            # Use default model if not specified
+            if not model:
+                model = PROVIDER_MODELS.get(provider, "")
+
+            # Get response from LLM with agentic system prompt
+            response = response_func(
+                query=message,
+                system_prompt=AGENTIC_SYSTEM_PROMPT,
+                model=model,
+                temperature=temperature,
+            )
+
+            # Extract any commands from the response
+            commands = extract_commands(response)
+
+            # Store in session history
+            if "chat_history" not in session:
+                session["chat_history"] = []
+
+            session["chat_history"].append(
+                {
+                    "role": "user",
+                    "content": message,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            )
+            session["chat_history"].append(
+                {
+                    "role": "assistant",
+                    "content": response,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            )
+
+            # Keep only last 50 messages
+            session["chat_history"] = session["chat_history"][-50:]
+            session.modified = True
+
+            return jsonify(
+                {
+                    "success": True,
+                    "response": response,
+                    "provider": provider,
+                    "commands": commands,  # Include extracted commands
+                }
+            )
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/chat/execute", methods=["POST"])
+    def api_chat_execute():
+        """API endpoint to execute a command"""
+        try:
+            data = request.get_json()
+            command = data.get("command", "").strip()
+
+            if not command:
+                return jsonify({"error": "Command is required"}), 400
+
+            result = run_shell_command(command)
+
+            return jsonify(
+                {
+                    "success": result["success"],
+                    "output": result["output"],
+                    "command": command,
+                }
+            )
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/chat/clear", methods=["POST"])
+    def api_chat_clear():
+        """API endpoint to clear chat history"""
+        session["chat_history"] = []
+        session.modified = True
+        return jsonify({"success": True, "message": "Chat history cleared"})
+
+    @app.route("/api/chat/history")
+    def api_chat_history():
+        """API endpoint to get chat history"""
+        history = session.get("chat_history", [])
+        return jsonify({"history": history})
+
+    @app.route("/api/agents")
     def api_agents():
         """API endpoint for agents data"""
         agents = db.list_agents()
         return jsonify(agents)
 
-    @app.route('/api/schedule')
+    @app.route("/api/schedule")
     def api_schedule():
         """API endpoint for schedule data"""
         scheduled_dict = scheduler.list_scheduled()
-        scheduled = [{'id': k, **v} for k, v in scheduled_dict.items()]
+        scheduled = [{"id": k, **v} for k, v in scheduled_dict.items()]
         return jsonify(scheduled)
 
-    @app.route('/api/agent/<agent_id>/logs')
+    @app.route("/api/agent/<agent_id>/logs")
     def api_agent_logs(agent_id):
         """API endpoint for agent logs"""
         agent = db.get_agent(agent_id)
         if not agent:
-            return jsonify({'error': 'Agent not found'}), 404
-        
-        log_path = agent.get('log_path')
-        if not log_path or not Path(log_path).exists():
-            return jsonify({'logs': []})
-        
-        try:
-            with open(log_path, 'r') as f:
-                logs = f.readlines()[-50:]
-            return jsonify({'logs': [line.strip() for line in logs]})
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            return jsonify({"error": "Agent not found"}), 404
 
-    @app.route('/api/agent/<agent_id>/stop', methods=['POST'])
+        log_path = agent.get("log_path")
+        if not log_path or not Path(log_path).exists():
+            return jsonify({"logs": []})
+
+        try:
+            with open(log_path, "r") as f:
+                logs = f.readlines()[-50:]
+            return jsonify({"logs": [line.strip() for line in logs]})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/agent/<agent_id>/stop", methods=["POST"])
     def api_stop_agent(agent_id):
         """API endpoint to stop an agent"""
         try:
             success = db.stop(agent_id)
             if success:
-                return jsonify({'success': True, 'message': 'Agent stopped'})
+                return jsonify({"success": True, "message": "Agent stopped"})
             else:
-                return jsonify({'error': 'Failed to stop agent'}), 500
+                return jsonify({"error": "Failed to stop agent"}), 500
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            return jsonify({"error": str(e)}), 500
 
-    @app.route('/api/schedule/<schedule_id>/remove', methods=['POST'])
+    @app.route("/api/schedule/<schedule_id>/remove", methods=["POST"])
     def api_remove_schedule(schedule_id):
         """API endpoint to remove scheduled agent"""
         try:
             db.remove_scheduled_agent(schedule_id)
-            return jsonify({'success': True, 'message': 'Schedule removed'})
+            return jsonify({"success": True, "message": "Schedule removed"})
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            return jsonify({"error": str(e)}), 500
 
-    @app.route('/api/prune', methods=['POST'])
+    @app.route("/api/prune", methods=["POST"])
     def api_prune():
         """API endpoint to prune stopped agents"""
         try:
             db.prune()
-            return jsonify({'success': True, 'message': 'Agents pruned'})
+            return jsonify({"success": True, "message": "Agents pruned"})
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            return jsonify({"error": str(e)}), 500
 
-    @app.route('/health')
+    @app.route("/health")
     def health_check():
         """Health check endpoint for monitoring"""
         try:
             agents = db.list_agents()
-            scheduler_status = 'running' if scheduler.running else 'stopped'
-            
-            return jsonify({
-                'status': 'healthy',
-                'timestamp': datetime.utcnow().isoformat(),
-                'database': 'connected',
-                'scheduler': scheduler_status,
-                'agents_count': len(agents)
-            }), 200
-        except Exception as e:
-            return jsonify({
-                'status': 'unhealthy',
-                'error': str(e),
-                'timestamp': datetime.utcnow().isoformat()
-            }), 503
+            scheduler_status = "running" if scheduler.running else "stopped"
 
-    @app.route('/metrics')
+            return jsonify(
+                {
+                    "status": "healthy",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "database": "connected",
+                    "scheduler": scheduler_status,
+                    "agents_count": len(agents),
+                }
+            ), 200
+        except Exception as e:
+            return jsonify(
+                {
+                    "status": "unhealthy",
+                    "error": str(e),
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            ), 503
+
+    @app.route("/metrics")
     def metrics():
         """Prometheus-style metrics endpoint"""
         try:
             agents = db.list_agents()
-            running = len([a for a in agents if a.get('status') == 'running'])
-            completed = len([a for a in agents if a.get('status') == 'completed'])
-            failed = len([a for a in agents if a.get('status') == 'failed'])
-            stopped = len([a for a in agents if a.get('status') == 'stopped'])
-            
+            running = len([a for a in agents if a.get("status") == "running"])
+            completed = len([a for a in agents if a.get("status") == "completed"])
+            failed = len([a for a in agents if a.get("status") == "failed"])
+            stopped = len([a for a in agents if a.get("status") == "stopped"])
+
             metrics_text = f"""# HELP agentos_agents_total Total number of agents
 # TYPE agentos_agents_total gauge
 agentos_agents_total {len(agents)}
@@ -211,20 +429,24 @@ agentos_agents_stopped {stopped}
 # TYPE agentos_scheduler_status gauge
 agentos_scheduler_status {1 if scheduler.running else 0}
 """
-            return metrics_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+            return metrics_text, 200, {"Content-Type": "text/plain; charset=utf-8"}
         except Exception as e:
-            return f"# Error generating metrics: {e}", 500, {'Content-Type': 'text/plain; charset=utf-8'}
+            return (
+                f"# Error generating metrics: {e}",
+                500,
+                {"Content-Type": "text/plain; charset=utf-8"},
+            )
 
     @app.errorhandler(404)
     def not_found(e):
         """Handle 404 errors"""
-        if request.path.startswith('/api/'):
-            return jsonify({'error': 'Endpoint not found'}), 404
-        return render_template('dashboard.html'), 404
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Endpoint not found"}), 404
+        return render_template("dashboard.html"), 404
 
     @app.errorhandler(500)
     def internal_error(e):
         """Handle 500 errors"""
-        if request.path.startswith('/api/'):
-            return jsonify({'error': 'Internal server error'}), 500
-        return jsonify({'error': 'Internal server error'}), 500
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"error": "Internal server error"}), 500

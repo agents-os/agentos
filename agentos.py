@@ -20,6 +20,7 @@ from rich.console import Console
 
 from agentos.cli.cli_commands import (
     cmd_app,
+    cmd_chat,
     cmd_logs,
     cmd_ps,
     cmd_run,
@@ -50,6 +51,16 @@ logger = logging.getLogger(__name__)
 def main():
     parser = create_parser()
 
+    def chat_handler(args):
+        """Handler for chat command"""
+        cmd_chat(
+            provider=args.provider,
+            model=args.model,
+            temperature=args.temperature,
+            system_prompt=args.system_prompt,
+            verbose=args.verbose if hasattr(args, "verbose") else False,
+        )
+
     for action in parser._subparsers._actions:
         if hasattr(action, "choices") and action.choices:
             action.choices["run"].set_defaults(func=cmd_run)
@@ -68,6 +79,7 @@ def main():
             action.choices["unschedule"].set_defaults(func=cmd_unschedule)
             action.choices["ui"].set_defaults(func=cmd_ui)
             action.choices["app"].set_defaults(func=cmd_app)
+            action.choices["chat"].set_defaults(func=chat_handler)
 
     args = parser.parse_args()
 

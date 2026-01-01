@@ -1,0 +1,14 @@
+# AgentOS Configuration
+name: IDK
+model_provider: github
+model_version: openai/gpt-4o-mini
+isolated: false
+
+# Security: Blocked commands
+DESTRUCTIVE_COMMANDS:
+  - rm
+  - rmdir
+  - sudo
+  - dd
+  - mkfs
+  - format

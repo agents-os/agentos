@@ -13,6 +13,8 @@ def create_parser():
         epilog="""
 Examples:
   agentos run agent.yaml --task "create a Python script"
+  agentos chat --provider openai
+  agentos chat --provider claude --temperature 0.5
   agentos ps
   agentos logs agent-123
   agentos stop agent-123
@@ -136,6 +138,38 @@ For more help: https://docs.agentos.dev
     )
     p_app.add_argument(
         "--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)"
+    )
+
+    # chat
+    p_chat = subparsers.add_parser(
+        "chat",
+        help="💬 Interactive chat mode",
+        description="Start an interactive chat session with an LLM (like Gemini, Claude, Codex)",
+    )
+    p_chat.add_argument(
+        "--provider",
+        "-p",
+        default="github",
+        choices=["github", "gemini", "cohere", "openai", "claude", "ollama"],
+        help="LLM provider to use (default: github)",
+    )
+    p_chat.add_argument(
+        "--model",
+        "-m",
+        default=None,
+        help="Model name (uses provider default if not specified)",
+    )
+    p_chat.add_argument(
+        "--temperature",
+        type=float,
+        default=0.7,
+        help="Temperature for generation (0.0-1.0, default: 0.7)",
+    )
+    p_chat.add_argument(
+        "--system-prompt",
+        "-s",
+        default=None,
+        help="Custom system prompt for the chat session",
     )
 
     return parser
