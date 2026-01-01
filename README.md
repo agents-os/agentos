@@ -8,10 +8,7 @@ AgentOS is a production-ready runtime for autonomous AI agents with built-in mem
 
 ## 🎬 Demo
 
-<video controls width="720">
-  <source src="assets/basic-chat.mp4" type="video/mp4">
-  Your browser does not support the video tag — you can download the video: [assets/basic-chat.mp4](assets/basic-chat.mp4)
-</video>
+![Preview](./assets/basic-chat.gif)
 
 ## 🚀 Quick Start
 
