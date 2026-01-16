@@ -53,43 +53,58 @@ agentos ps
 
 ### ✅ Production Ready
 
-- **Comprehensive logging** with structured output
-- **Error handling** and retry logic
-- **Process management** with graceful shutdown
-- **Security controls** blocking destructive commands
+- **Comprehensive logging** with structured output and per-agent log files
+- **Intelligent retry logic** with exponential backoff for LLM API calls
+- **Process management** with real-time monitoring and graceful shutdown
+- **Security controls** blocking destructive commands and injection attacks
 - **Timeout protection** preventing runaway processes
+- **Resource limits** for memory, CPU, and execution steps
 
-### � Interactive Chat Mode
+### 💬 Interactive Chat Mode
 
 - **Real-time conversations** with AI using any LLM provider
-- **Rich terminal UI** with markdown rendering and color coding
-- **Chat history management** with context preservation
+- **Rich terminal UI** with markdown rendering and syntax highlighting
+- **Persistent chat history** with SQLite backend and search functionality
+- **Conversation export** to JSON, Markdown, or plain text formats
+- **Context preservation** across sessions with configurable context window
 - **Customizable prompts** and temperature settings
 - **Offline support** with local Ollama models
 - **API-free options** using GitHub or Ollama
 
-### �🔒 Security First
+### 🔒 Security First
 
-- **Command filtering** blocks dangerous operations
-- **Input validation** prevents command injection
-- **Docker isolation** (optional) for safe execution
-- **Resource limits** and timeout controls
+- **Command filtering** blocks 20+ dangerous operations (rm, sudo, dd, etc.)
+- **Input validation** prevents shell injection with pattern detection
+- **Path traversal protection** blocks `../` and absolute path escapes
+- **Docker isolation** (optional) with memory/CPU limits and network isolation
+- **Resource limits** configurable per-agent (memory, CPU, timeout, steps)
+- **Security context** for audit logging and tracking
 
-### 🤖 Multi-LLM Support
+### 🤖 Multi-LLM Support (6+ Providers)
 
-- **GitHub Models** (default)
-- **OpenAI** GPT-4, GPT-3.5
-- **Anthropic Claude** 3.5
-- **Google Gemini** 2.0
-- **Cohere** Command
-- **Ollama** (local models)
+- **GitHub Models** (default) - Free tier available
+- **OpenAI** GPT-4o, GPT-4, GPT-3.5-turbo
+- **Anthropic Claude** 3.5 Sonnet, Claude 3 Opus
+- **Google Gemini** 2.0 Flash, 1.5 Pro
+- **Cohere** Command R+, Command
+- **Ollama** (local models) - No API key required
 
 ### 📊 Process Management
 
 - **Agent registry** with SQLite backend
+- **Real-time process monitoring** with CPU/memory tracking
 - **Status tracking** (running, completed, failed, stopped)
-- **Log aggregation** per agent
-- **Graceful shutdown** with SIGTERM/SIGKILL
+- **Log aggregation** per agent with rotation support
+- **Graceful shutdown** with signal handlers (SIGTERM/SIGINT)
+- **Agent lifecycle management** with context managers
+
+### 🔄 Retry Logic & Resilience
+
+- **Exponential backoff** with configurable jitter
+- **Automatic retry** for transient API failures
+- **Customizable retry strategies** (aggressive, gentle, default)
+- **Per-provider retry configuration**
+- **Circuit breaker patterns** for failing services
 
 ## 📋 Commands
 
@@ -240,26 +255,174 @@ Requires Docker daemon running.
 
 ### Command Filtering
 
-Blocks dangerous commands:
+Blocks dangerous commands automatically:
 
-- File deletion: `rm`, `rmdir`
-- System modification: `sudo`, `chown`
-- Disk operations: `dd`, `mkfs`, `fdisk`
-- Process control: `kill`, `killall`
+- File deletion: `rm`, `rmdir`, `shred`
+- System modification: `sudo`, `su`, `chown`, `chmod`
+- Disk operations: `dd`, `mkfs`, `fdisk`, `format`
+- Process control: `kill`, `killall`, `pkill`
+- Network: `nc`, `netcat`, `wget`, `curl` (to unknown hosts)
 
 ### Input Validation
 
-Prevents command injection:
+Prevents command injection attacks:
 
 - Shell metacharacters: `;`, `&&`, `||`, `|`
 - Command substitution: `` ` ``, `$()`
-- Variable expansion: `$VAR`
+- Variable expansion: `$VAR`, `${VAR}`
+- Path traversal: `../`, absolute paths outside workspace
 
 ### Resource Limits
 
-- **Timeout**: 30s per command (configurable)
-- **Step limit**: 10 steps per task (configurable)
-- **Retry logic**: 3 attempts for LLM calls
+Configure per-agent resource constraints:
+
+```yaml
+resource_limits:
+  max_steps: 50 # Maximum execution steps
+  timeout: 300 # Timeout in seconds
+  max_memory_mb: 512 # Memory limit (Docker only)
+  max_cpu_percent: 50 # CPU limit (Docker only)
+```
+
+### Security Context
+
+Track and audit agent actions:
+
+```python
+from agentos.core.security import SecurityContext, validate_command
+
+with SecurityContext(agent_id="my_agent") as ctx:
+    result = validate_command("ls -la")
+    if result.is_safe:
+        # Execute command
+        pass
+    # All actions logged automatically
+```
+
+## 🔄 Retry Configuration
+
+Configure retry behavior for LLM API calls:
+
+```yaml
+retry_config:
+  max_retries: 3 # Maximum retry attempts
+  initial_delay: 1.0 # Initial delay in seconds
+  max_delay: 30.0 # Maximum delay cap
+  exponential_base: 2.0 # Exponential backoff multiplier
+  jitter: true # Add randomness to prevent thundering herd
+```
+
+### Retry Strategies
+
+```python
+from agentos.core.retry import DEFAULT_LLM_RETRY, AGGRESSIVE_RETRY, GENTLE_RETRY
+
+# Default: 3 retries, 1-30s delay
+config = DEFAULT_LLM_RETRY
+
+# Aggressive: 5 retries, 0.5-60s delay (for critical operations)
+config = AGGRESSIVE_RETRY
+
+# Gentle: 2 retries, 2-10s delay (for user-facing features)
+config = GENTLE_RETRY
+```
+
+## 💾 Chat History
+
+Persistent chat history with SQLite backend:
+
+```python
+from agentos.core.chat_history import ChatHistoryManager
+
+# Initialize manager
+history = ChatHistoryManager()
+
+# Create conversation
+conv_id = history.create_conversation(
+    agent_id="assistant",
+    title="Python Help Session"
+)
+
+# Add messages
+history.add_message(conv_id, "user", "How do I read a file?")
+history.add_message(conv_id, "assistant", "Use open() function...")
+
+# Search history
+results = history.search_messages("file", agent_id="assistant")
+
+# Export conversation
+history.export_conversation(conv_id, "chat.md", format="markdown")
+```
+
+## 🐳 Docker Sandbox
+
+Enhanced Docker isolation for safe execution:
+
+```yaml
+name: secure_agent
+model_provider: github
+model_version: openai/gpt-4o-mini
+isolated: true
+```
+
+### Advanced Docker Configuration
+
+```python
+from agentos.core.docker_sandbox import DockerSandbox
+
+sandbox = DockerSandbox(
+    memory_limit="256m",      # Memory constraint
+    cpu_quota=50000,          # CPU microseconds per period
+    network_mode="none",      # No network access
+    read_only=True,           # Read-only filesystem
+    working_dir="/workspace"
+)
+
+result = sandbox.run_in_sandbox("python script.py")
+```
+
+Requires Docker daemon running.
+
+## 📊 Process Monitoring
+
+Real-time process monitoring and lifecycle management:
+
+```python
+from agentos.core.process_manager import ProcessMonitor, AgentLifecycle
+
+# Get singleton monitor
+monitor = ProcessMonitor()
+
+# Use lifecycle context manager
+with AgentLifecycle("my_agent", task="Process data") as agent:
+    # Agent is registered and tracked
+    # CPU/memory monitored in real-time
+    pass  # Do work
+# Automatically cleaned up
+
+# Query running agents
+agents = monitor.get_running_agents()
+for agent_id, info in agents.items():
+    print(f"{agent_id}: {info['status']} - CPU: {info['cpu_percent']}%")
+```
+
+## 🛑 Graceful Shutdown
+
+Signal handling for clean termination:
+
+```python
+from agentos.core.shutdown import ShutdownManager, ShutdownContext
+
+# Register cleanup callbacks
+manager = ShutdownManager()
+manager.register_callback(lambda: print("Cleaning up..."))
+
+# Use context manager
+with ShutdownContext():
+    # Protected execution
+    # SIGTERM/SIGINT handled gracefully
+    pass
+```
 
 ## 📊 Monitoring
 
@@ -276,6 +439,26 @@ Prevents command injection:
 - `1`: General error
 - `124`: Timeout
 - `130`: User interrupt (Ctrl+C)
+
+## 🧩 Architecture
+
+```
+agentos/
+├── agent/          # Agent execution and planning
+├── cli/            # Command-line interface
+├── core/           # Core utilities
+│   ├── config.py       # Configuration management
+│   ├── retry.py        # Retry logic with backoff
+│   ├── security.py     # Security validation
+│   ├── chat_history.py # Persistent chat storage
+│   ├── shutdown.py     # Graceful shutdown
+│   ├── docker_sandbox.py # Docker isolation
+│   └── process_manager.py # Process monitoring
+├── database/       # SQLite backend
+├── llm/            # LLM provider integrations
+├── mcp/            # Model Context Protocol
+└── web/            # Web UI
+```
 
 ## 🔄 Development
 
@@ -315,8 +498,6 @@ MIT License - see [LICENSE](LICENSE) file.
 5. Open Pull Request
 
 ## 📞 Support
-
-<!-- - **Purchase**: [https://junaidahmed65.gumroad.com/l/spfzuo](https://junaidahmed65.gumroad.com/l/spfzuo) -->
 
 - **Repository**: [https://github.com/agents-os/agentos](https://github.com/agents-os/agentos)
 - **Issues**: [GitHub Issues](https://github.com/agents-os/agentos/issues)

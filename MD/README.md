@@ -13,6 +13,7 @@ AgentOS is a production-ready runtime for autonomous AI agents with built-in mem
 Purchase and download from: **https://junaidahmed65.gumroad.com/l/spfzuo**
 
 Then run the installer:
+
 ```bash
 # Linux
 python3 install_linux.py
@@ -24,6 +25,7 @@ python install_windows.py
 ### Basic Usage
 
 1. Create an agent manifest (`agent.yaml`):
+
 ```yaml
 name: my_assistant
 model_provider: github
@@ -32,11 +34,13 @@ isolated: false
 ```
 
 2. Run your agent:
+
 ```bash
 agentos run agent.yaml --task "create a Python script that prints hello world"
 ```
 
 3. Monitor running agents:
+
 ```bash
 agentos ps
 ```
@@ -44,55 +48,86 @@ agentos ps
 ## 🏗️ Features
 
 ### ✅ Production Ready
-- **Comprehensive logging** with structured output
-- **Error handling** and retry logic
-- **Process management** with graceful shutdown
-- **Security controls** blocking destructive commands
+
+- **Comprehensive logging** with structured output and per-agent log files
+- **Intelligent retry logic** with exponential backoff for LLM API calls
+- **Process management** with real-time monitoring and graceful shutdown
+- **Security controls** blocking destructive commands and injection attacks
 - **Timeout protection** preventing runaway processes
+- **Resource limits** for memory, CPU, and execution steps
+
+### 💬 Interactive Chat Mode
+
+- **Real-time conversations** with AI using any LLM provider
+- **Rich terminal UI** with markdown rendering and syntax highlighting
+- **Persistent chat history** with SQLite backend and search functionality
+- **Conversation export** to JSON, Markdown, or plain text formats
+- **Context preservation** across sessions with configurable context window
+- **Customizable prompts** and temperature settings
+- **Offline support** with local Ollama models
 
 ### 🔒 Security First
-- **Command filtering** blocks dangerous operations
-- **Input validation** prevents command injection
-- **Docker isolation** (optional) for safe execution
-- **Resource limits** and timeout controls
 
-### 🤖 Multi-LLM Support
-- **GitHub Models** (default)
-- **OpenAI** GPT-4, GPT-3.5
-- **Anthropic Claude** 3.5
-- **Google Gemini** 2.0
-- **Cohere** Command
-- **Ollama** (local models)
+- **Command filtering** blocks 20+ dangerous operations (rm, sudo, dd, etc.)
+- **Input validation** prevents shell injection with pattern detection
+- **Path traversal protection** blocks `../` and absolute path escapes
+- **Docker isolation** (optional) with memory/CPU limits and network isolation
+- **Resource limits** configurable per-agent (memory, CPU, timeout, steps)
+- **Security context** for audit logging and tracking
+
+### 🤖 Multi-LLM Support (6+ Providers)
+
+- **GitHub Models** (default) - Free tier available
+- **OpenAI** GPT-4o, GPT-4, GPT-3.5-turbo
+- **Anthropic Claude** 3.5 Sonnet, Claude 3 Opus
+- **Google Gemini** 2.0 Flash, 1.5 Pro
+- **Cohere** Command R+, Command
+- **Ollama** (local models) - No API key required
 
 ### 📊 Process Management
+
 - **Agent registry** with SQLite backend
+- **Real-time process monitoring** with CPU/memory tracking
 - **Status tracking** (running, completed, failed, stopped)
-- **Log aggregation** per agent
-- **Graceful shutdown** with SIGTERM/SIGKILL
+- **Log aggregation** per agent with rotation support
+- **Graceful shutdown** with signal handlers (SIGTERM/SIGINT)
+- **Agent lifecycle management** with context managers
+
+### 🔄 Retry Logic & Resilience
+
+- **Exponential backoff** with configurable jitter
+- **Automatic retry** for transient API failures
+- **Customizable retry strategies** (aggressive, gentle, default)
+- **Per-provider retry configuration**
 
 ## 📋 Commands
 
 ### Run Agent
+
 ```bash
 agentos run <manifest> --task "<task>" [--timeout 300] [--verbose]
 ```
 
 ### List Agents
+
 ```bash
 agentos ps
 ```
 
 ### View Logs
+
 ```bash
 agentos logs <agent_name> [--tail 50]
 ```
 
 ### Stop Agent
+
 ```bash
 agentos stop <agent_name>
 ```
 
 ### Clean Up
+
 ```bash
 agentos prune  # Remove stopped agents
 ```
@@ -115,18 +150,22 @@ DESTRUCTIVE_COMMANDS:
 ```
 
 ### Required Fields
+
 - `name`: Agent identifier
 - `model_provider`: LLM provider (github, openai, claude, gemini, cohere, ollama)
 - `model_version`: Specific model to use
 
 ### Optional Fields
+
 - `isolated`: Enable Docker sandboxing (default: true)
 - `DESTRUCTIVE_COMMANDS`: Custom list of blocked commands
 
 ## 🔧 Configuration
 
 ### Environment Variables
+
 Create `.env` file:
+
 ```bash
 # API Keys (set as needed)
 GIT_HUB_TOKEN=your_github_token
@@ -137,11 +176,14 @@ COHERE_API_KEY=your_cohere_key
 ```
 
 ### Logging
+
 Logs are stored in `~/.agentos/logs/`:
+
 - `agentos.log` - Main system log
 - `<agent_name>_<id>.log` - Per-agent execution logs
 
 ### Database
+
 Agent registry stored in `~/.agentos/runtime.db` (SQLite)
 
 ## 🐳 Docker Support
@@ -160,32 +202,108 @@ Requires Docker daemon running.
 ## 🛡️ Security Features
 
 ### Command Filtering
-Blocks dangerous commands:
-- File deletion: `rm`, `rmdir`
-- System modification: `sudo`, `chown`
-- Disk operations: `dd`, `mkfs`, `fdisk`
-- Process control: `kill`, `killall`
+
+Blocks dangerous commands automatically:
+
+- File deletion: `rm`, `rmdir`, `shred`
+- System modification: `sudo`, `su`, `chown`, `chmod`
+- Disk operations: `dd`, `mkfs`, `fdisk`, `format`
+- Process control: `kill`, `killall`, `pkill`
+- Network: `nc`, `netcat`, `wget`, `curl` (to unknown hosts)
 
 ### Input Validation
-Prevents command injection:
+
+Prevents command injection attacks:
+
 - Shell metacharacters: `;`, `&&`, `||`, `|`
 - Command substitution: `` ` ``, `$()`
-- Variable expansion: `$VAR`
+- Variable expansion: `$VAR`, `${VAR}`
+- Path traversal: `../`, absolute paths outside workspace
 
 ### Resource Limits
-- **Timeout**: 30s per command (configurable)
-- **Step limit**: 10 steps per task (configurable)
-- **Retry logic**: 3 attempts for LLM calls
+
+Configure per-agent resource constraints:
+
+```yaml
+resource_limits:
+  max_steps: 50 # Maximum execution steps
+  timeout: 300 # Timeout in seconds
+  max_memory_mb: 512 # Memory limit (Docker only)
+  max_cpu_percent: 50 # CPU limit (Docker only)
+```
+
+## 🔄 Retry Configuration
+
+Configure retry behavior for LLM API calls:
+
+```yaml
+retry_config:
+  max_retries: 3 # Maximum retry attempts
+  initial_delay: 1.0 # Initial delay in seconds
+  max_delay: 30.0 # Maximum delay cap
+  exponential_base: 2.0 # Exponential backoff multiplier
+  jitter: true # Add randomness
+```
+
+## 💾 Chat History
+
+Persistent chat history with SQLite backend:
+
+```python
+from agentos.core.chat_history import ChatHistoryManager
+
+history = ChatHistoryManager()
+conv_id = history.create_conversation(agent_id="assistant")
+history.add_message(conv_id, "user", "Hello!")
+history.export_conversation(conv_id, "chat.md", format="markdown")
+```
+
+## 🐳 Docker Sandbox
+
+Enhanced Docker isolation:
+
+```python
+from agentos.core.docker_sandbox import DockerSandbox
+
+sandbox = DockerSandbox(
+    memory_limit="256m",
+    cpu_quota=50000,
+    network_mode="none"
+)
+result = sandbox.run_in_sandbox("python script.py")
+```
+
+## 📊 Process Monitoring
+
+```python
+from agentos.core.process_manager import AgentLifecycle
+
+with AgentLifecycle("my_agent", task="Process data") as agent:
+    # Agent tracked automatically
+    pass
+```
+
+## 🛑 Graceful Shutdown
+
+```python
+from agentos.core.shutdown import ShutdownContext
+
+with ShutdownContext():
+    # SIGTERM/SIGINT handled gracefully
+    pass
+```
 
 ## 📊 Monitoring
 
 ### Status Codes
+
 - `running`: Agent is executing
 - `completed`: Task finished successfully
 - `failed`: Task failed with error
 - `stopped`: Manually terminated
 
 ### Exit Codes
+
 - `0`: Success
 - `1`: General error
 - `124`: Timeout
@@ -194,6 +312,7 @@ Prevents command injection:
 ## 🔄 Development
 
 ### Local Setup
+
 ```bash
 git clone https://github.com/agents-os/agentos
 cd agentos
@@ -203,11 +322,13 @@ pip install -r requirements.txt
 ```
 
 ### Testing
+
 ```bash
 python -m pytest tests/
 ```
 
 ### Code Quality
+
 ```bash
 black .
 flake8 .

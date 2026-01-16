@@ -1,10 +1,19 @@
 # AgentOS Production Configuration
-name: production_assistant
-model_provider: github
-model_version: openai/gpt-4o-mini
-isolated: false # Disable sandboxing for this example
+# Human-readable, version control friendly, shareable agent definition
 
-# MCP integration (optional)
+name: production_assistant
+model_provider: github # github, openai, claude, gemini, cohere, ollama
+model_version: openai/gpt-4o-mini
+isolated: false # Enable Docker sandbox for this agent
+
+# Resource Limits (timeouts & step limits)
+resource_limits:
+  max_steps: 50 # Maximum execution steps
+  max_timeout: 300 # Maximum total execution time (seconds)
+  max_output_size: 1048576 # 1MB max output size
+  max_file_size: 10485760 # 10MB max file size
+
+# MCP integration (optional - extensible tools)
 # mcp:
 #   enabled: true
 #   servers:
@@ -17,34 +26,54 @@ isolated: false # Disable sandboxing for this example
 # Scheduling (optional)
 # time: 23        # Run daily at 11 PM (24-hour format)
 # repeat: 5       # Repeat every 5 minutes
-# Security: Blocked commands (production defaults)
+
+# Security: Command filtering - blocks dangerous operations
 DESTRUCTIVE_COMMANDS:
   - rm
   - rmdir
-  # - dd
-  # - mkfs
-  # - fdisk
-  # - format
-  # - del
-  # - rd
-  # - erase
-  # - chown
-  # - chmod
-  # - truncate
-  # - shred
-  # - sudo
-  # - su
-  # - mv # Can be destructive
-  # - rf
-  # - kill
-  # - killall
-  # - pkill
-  # - reboot
-  # - shutdown
-  # - halt
-  # - poweroff
-  # - mount
-  # - umount
-  # - crontab
-  # - systemctl
-  # - service
+  - dd
+  - mkfs
+  - fdisk
+  - format
+  - del
+  - rd
+  - erase
+  - chown
+  - chmod
+  - truncate
+  - shred
+  - sudo
+  - su
+  - mv
+  - rf
+  - kill
+  - killall
+  - pkill
+  - reboot
+  - shutdown
+  - halt
+  - poweroff
+  - mount
+  - umount
+  - crontab
+  - systemctl
+  - service
+
+# Input validation - sanitizes injection attacks
+input_validation:
+  enabled: true
+  block_patterns:
+    - ";" # Semicolon command chaining
+    - "&&" # AND command chaining
+    - "||" # OR command chaining
+    - "|&" # Pipe with stderr
+    - "`" # Backtick command substitution
+    - "$(" # Dollar-paren command substitution
+
+# Retry logic for LLM calls
+retry_config:
+  max_retries: 3
+  initial_delay: 1.0
+  max_delay: 30.0
+  exponential_base: 2.0
+  jitter: true

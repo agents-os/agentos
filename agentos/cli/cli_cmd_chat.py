@@ -402,12 +402,11 @@ def cmd_chat(
     provider = provider.lower()
     if provider not in PROVIDERS:
         if console:
-            console.print(
-                f"[red]Error:[/red] Invalid provider '{provider}'", file=sys.stderr
-            )
+            console.print(f"[red]Error:[/red] Invalid provider '{provider}'")
+            console.print(f"[dim]Available providers: {', '.join(PROVIDERS.keys())}[/dim]")
         else:
             print(f"Error: Invalid provider '{provider}'", file=sys.stderr)
-        print(f"Available providers: {', '.join(PROVIDERS.keys())}", file=sys.stderr)
+            print(f"Available providers: {', '.join(PROVIDERS.keys())}", file=sys.stderr)
         sys.exit(1)
 
     # Set model
@@ -880,7 +879,7 @@ Provide a clear, concise answer based on the information above. Do NOT output an
 
                 except Exception as e:
                     if console:
-                        console.print(f"\n[red]Error:[/red] {str(e)}", file=sys.stderr)
+                        console.print(f"\n[red]Error:[/red] {str(e)}")
                     else:
                         print(f"\nError: {str(e)}", file=sys.stderr)
 

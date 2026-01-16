@@ -1,12 +1,28 @@
 # AgentOS Secure Agent
 # Maximum security configuration for untrusted tasks
+# Security-first design with multiple layers of protection
 
 name: secure_agent
 model_provider: github
 model_version: openai/gpt-4o-mini
-isolated: true  # Always use Docker isolation
+isolated: true # Always use Docker isolation (sandboxed execution)
 
-# Comprehensive security restrictions
+# Strict resource limits
+resource_limits:
+  max_steps: 20 # Limited execution steps
+  max_timeout: 60 # Short timeout (1 minute)
+  max_output_size: 524288 # 512KB max output
+  max_file_size: 1048576 # 1MB max file size
+  max_memory_mb: 256 # Memory limit
+  max_cpu_percent: 50 # CPU limit
+
+# Retry configuration (gentle for security)
+retry_config:
+  max_retries: 2
+  initial_delay: 2.0
+  max_delay: 10.0
+
+# Comprehensive command filtering - blocks dangerous operations
 DESTRUCTIVE_COMMANDS:
   - rm
   - rmdir
@@ -24,7 +40,7 @@ DESTRUCTIVE_COMMANDS:
   - sudo
   - su
   - mv
-  - cp  # Can overwrite files
+  - cp # Can overwrite files
   - rf
   - kill
   - killall
@@ -39,10 +55,32 @@ DESTRUCTIVE_COMMANDS:
   - systemctl
   - service
   - wget
-  - curl  # Prevent network access
+  - curl # Prevent network access
   - ssh
   - scp
   - rsync
+  - nc
+  - netcat
+  - nmap
+
+# Input validation - sanitizes injection attacks
+input_validation:
+  enabled: true
+  strict: true # Apply stricter sanitization
+  block_patterns:
+    - ";"
+    - "&&"
+    - "||"
+    - "|&"
+    - "|"
+    - "`"
+    - "$("
+    - "${"
+    - "\\n"
+
+# Network restrictions
+network:
+  disabled: true # No network access in sandbox
 
 # Usage:
 # agentos run examples/secure-agent.yaml --task "analyze this text file safely"

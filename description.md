@@ -4,16 +4,69 @@ AgentOS is a production-ready runtime system designed for autonomous AI agents, 
 
 ## Key Features
 
-- **Multi-LLM Support**: Seamlessly switch between GitHub Models, OpenAI, Claude, Gemini, Cohere, and Ollama
-- **Production-Ready**: Comprehensive logging, error handling, and process management
-- **Security First**: Command filtering, input validation, Docker isolation, and resource limits
-- **Easy to Use**: Simple CLI commands and desktop application interface
-- **Flexible Deployment**: Run locally, in Docker containers, or as a systemd service
-- **Automated Scheduling**: Built-in scheduler for recurring agent tasks
+### 🤖 Multi-LLM Support (6+ Providers)
+
+- Seamlessly switch between GitHub Models, OpenAI, Claude, Gemini, Cohere, and Ollama
+- Automatic retry with exponential backoff for API failures
+- Provider-specific model configurations
+
+### ✅ Production-Ready
+
+- Comprehensive logging with structured output and per-agent logs
+- Intelligent retry logic with exponential backoff for LLM API calls
+- Real-time process monitoring with CPU/memory tracking
+- Graceful shutdown with signal handlers (SIGTERM/SIGINT)
+
+### 🔒 Security First
+
+- Command filtering blocks 20+ dangerous operations
+- Input validation prevents shell injection attacks
+- Path traversal protection
+- Docker isolation with memory/CPU limits and network isolation
+- Security context for audit logging
+
+### 💬 Interactive Chat Mode
+
+- Rich terminal UI with markdown rendering
+- Persistent chat history with SQLite backend
+- Search functionality and conversation export (JSON, Markdown, text)
+- Context preservation across sessions
+
+### 📊 Process Management
+
+- Agent registry with SQLite backend
+- Real-time CPU/memory monitoring
+- Agent lifecycle management with context managers
+- Status tracking (running, completed, failed, stopped)
+
+### 🔄 Resilience & Reliability
+
+- Exponential backoff with configurable jitter
+- Customizable retry strategies (aggressive, gentle, default)
+- Circuit breaker patterns for failing services
 
 ## What You Get
 
 Purchase includes complete source code, automated installers for Linux and Windows, desktop application with GUI, CLI tools, comprehensive documentation, and lifetime access to updates.
+
+## Architecture
+
+```
+agentos/
+├── agent/          # Agent execution and planning
+├── cli/            # Command-line interface
+├── core/           # Core utilities
+│   ├── retry.py        # Retry logic with backoff
+│   ├── security.py     # Security validation
+│   ├── chat_history.py # Persistent chat storage
+│   ├── shutdown.py     # Graceful shutdown
+│   ├── docker_sandbox.py # Docker isolation
+│   └── process_manager.py # Process monitoring
+├── database/       # SQLite backend
+├── llm/            # LLM provider integrations
+├── mcp/            # Model Context Protocol
+└── web/            # Web UI
+```
 
 ## Get Started
 
