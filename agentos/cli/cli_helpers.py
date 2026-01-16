@@ -62,6 +62,11 @@ def load_manifest(path: str) -> dict:
             "DESTRUCTIVE_COMMANDS", utils.DESTRUCTIVE_COMMANDS
         )
 
+        # MCP settings (optional)
+        mcp_cfg = configs.get("mcp", {}) or {}
+        utils.MCP_ENABLED = bool(mcp_cfg.get("enabled", False))
+        utils.MCP_SERVERS = mcp_cfg.get("servers", []) or []
+
         utils.TIME_CONFIG = configs.get("time")
         utils.REPEAT_CONFIG = configs.get("repeat")
 

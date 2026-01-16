@@ -1,4 +1,4 @@
-chat_history = {}
+chat_history = []
 PERMS = []
 PROVIDER = "gemini"
 MODEL = "models/gemini-2.0-flash-lite"
@@ -6,6 +6,8 @@ NAME = "cli-agent"
 ISOLATED = True
 TIME_CONFIG = None
 REPEAT_CONFIG = None
+MCP_ENABLED = False
+MCP_SERVERS = []
 
 DESTRUCTIVE_COMMANDS = [
     "rm",

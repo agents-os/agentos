@@ -171,5 +171,16 @@ For more help: https://docs.agentos.dev
         default=None,
         help="Custom system prompt for the chat session",
     )
+    p_chat.add_argument(
+        "--mcp",
+        action="store_true",
+        default=True,
+        help="Enable MCP mode (use built-in tools instead of shell commands) [default: enabled]",
+    )
+    p_chat.add_argument(
+        "--no-mcp",
+        action="store_true",
+        help="Disable MCP mode (use shell commands instead)",
+    )
 
     return parser

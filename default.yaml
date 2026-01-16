@@ -4,6 +4,16 @@ model_provider: github
 model_version: openai/gpt-4o-mini
 isolated: false # Disable sandboxing for this example
 
+# MCP integration (optional)
+# mcp:
+#   enabled: true
+#   servers:
+#     - name: local_tools
+#       kind: stdio
+#       command: my-mcp-server --stdio
+#       env:
+#         EXAMPLE_API_KEY: ${EXAMPLE_API_KEY}
+
 # Scheduling (optional)
 # time: 23        # Run daily at 11 PM (24-hour format)
 # repeat: 5       # Repeat every 5 minutes

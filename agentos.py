@@ -13,6 +13,7 @@ from pathlib import Path
 if sys.platform == "win32":
     os.environ["PYTHONIOENCODING"] = "utf-8"
     import codecs
+
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
     sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
 
@@ -53,12 +54,15 @@ def main():
 
     def chat_handler(args):
         """Handler for chat command"""
+        # MCP is default, --no-mcp disables it
+        use_mcp = not getattr(args, "no_mcp", False)
         cmd_chat(
             provider=args.provider,
             model=args.model,
             temperature=args.temperature,
             system_prompt=args.system_prompt,
             verbose=args.verbose if hasattr(args, "verbose") else False,
+            mcp=use_mcp,
         )
 
     for action in parser._subparsers._actions:

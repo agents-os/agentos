@@ -11,6 +11,7 @@ from flask import jsonify, render_template, request, session
 
 from agentos.core import path_resolver
 from agentos.core.scheduler import scheduler
+from agentos.core.utils import MCP_ENABLED, MCP_SERVERS
 from agentos.database import db
 from agentos.llm.answerer import (
     get_claude_response,
@@ -20,6 +21,7 @@ from agentos.llm.answerer import (
     get_ollama_response,
     get_openai_response,
 )
+from agentos.mcp import MCPCall, MCPClient, MCPNotAvailable
 
 # Provider mapping
 CHAT_PROVIDERS = {
@@ -53,6 +55,36 @@ The system will automatically detect and execute these commands. After execution
 
 Be helpful and when a task requires a command, always provide it in the proper format so it can be executed.
 Keep your responses concise and action-oriented."""
+
+
+# Agentic system prompt for MCP tool usage (web)
+AGENTIC_MCP_SYSTEM_PROMPT = """You are an AI assistant with access to MCP (Model Context Protocol) tools.
+
+AVAILABLE TOOLS:
+- read_file(path, start_line?, end_line?) - Read file contents
+- write_file(path, content, create_dirs?) - Write/create a file
+- replace(path, old_string, new_string, count?) - Edit/replace text in a file
+- list_directory(path?, recursive?, max_depth?) - List directory contents
+- glob(pattern, root?) - Find files matching a pattern
+- search_file_content(pattern, path?, is_regex?, include_pattern?, max_results?) - Search text in files
+- run_shell_command(command, cwd?, timeout?, env?) - Execute a shell command
+- web_fetch(url, method?, headers?, body?, timeout?) - Fetch URL content
+- google_web_search(query, num_results?) - Web search
+- save_memory(key, value) / get_memory(key) - Store/retrieve values
+- write_todos(todos) / read_todos() - Manage todo list
+- delegate_to_agent(task, agent_name?, context?) - Delegate to another agent
+
+Respond with a JSON code block:
+```json
+{
+  "mcp_calls": [
+    {"server": "builtin", "tool": "<tool_name>", "args": {"arg1": "value1"}}
+  ]
+}
+```
+
+Use "builtin" as server. Prefer MCP tools over shell commands.
+"""
 
 
 def run_shell_command(command: str, timeout: int = 60):
@@ -104,6 +136,27 @@ def extract_commands(response: str):
             if line and not line.startswith("#"):
                 commands.append(line)
     return commands
+
+
+def extract_mcp_calls(response: str):
+    pattern = r"```json\s*\n(.*?)```"
+    matches = re.findall(pattern, response, re.DOTALL | re.IGNORECASE)
+    for m in matches:
+        try:
+            obj = json.loads(m)
+            calls = obj.get("mcp_calls") or obj.get("tools") or []
+            out = []
+            for c in calls:
+                server = str(c.get("server") or "").strip()
+                tool = str(c.get("tool") or "").strip()
+                args = c.get("args") or {}
+                if server and tool and isinstance(args, dict):
+                    out.append(MCPCall(server=server, tool=tool, args=args))
+            if out:
+                return out
+        except Exception:
+            continue
+    return []
 
 
 def register_routes(app):
@@ -232,13 +285,37 @@ def register_routes(app):
             # Get response from LLM with agentic system prompt
             response = response_func(
                 query=message,
-                system_prompt=AGENTIC_SYSTEM_PROMPT,
+                system_prompt=AGENTIC_MCP_SYSTEM_PROMPT
+                if MCP_ENABLED
+                else AGENTIC_SYSTEM_PROMPT,
                 model=model,
                 temperature=temperature,
             )
 
-            # Extract any commands from the response
-            commands = extract_commands(response)
+            # Extract MCP calls or commands
+            mcp_calls = extract_mcp_calls(response) if MCP_ENABLED else []
+            commands = [] if mcp_calls else extract_commands(response)
+
+            mcp_results = []
+            mcp_error = None
+            if MCP_ENABLED and mcp_calls:
+                try:
+                    client = MCPClient(servers=MCP_SERVERS)
+                    client.connect()
+                    for call in mcp_calls:
+                        try:
+                            res = client.call(call)
+                        except Exception as e:
+                            res = {"success": False, "error": str(e)}
+                        mcp_results.append(
+                            {
+                                "server": call.server,
+                                "tool": call.tool,
+                                "result": res,
+                            }
+                        )
+                except MCPNotAvailable as e:
+                    mcp_error = str(e)
 
             # Store in session history
             if "chat_history" not in session:
@@ -268,7 +345,13 @@ def register_routes(app):
                     "success": True,
                     "response": response,
                     "provider": provider,
-                    "commands": commands,  # Include extracted commands
+                    "commands": commands,
+                    "mcp_calls": [
+                        {"server": c.server, "tool": c.tool, "args": c.args}
+                        for c in mcp_calls
+                    ],
+                    "mcp_results": mcp_results,
+                    "mcp_error": mcp_error,
                 }
             )
         except Exception as e:
@@ -291,6 +374,127 @@ def register_routes(app):
                     "success": result["success"],
                     "output": result["output"],
                     "command": command,
+                }
+            )
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/chat/execute-mcp", methods=["POST"])
+    def api_chat_execute_mcp():
+        """API endpoint to execute MCP tool calls"""
+        try:
+            data = request.get_json()
+            mcp_calls_data = data.get("mcp_calls", [])
+
+            if not mcp_calls_data:
+                return jsonify({"error": "No MCP calls provided"}), 400
+
+            # Convert to MCPCall objects
+            calls = []
+            for c in mcp_calls_data:
+                server = str(c.get("server") or "builtin").strip()
+                tool = str(c.get("tool") or "").strip()
+                args = c.get("args") or {}
+                if tool and isinstance(args, dict):
+                    calls.append(MCPCall(server=server, tool=tool, args=args))
+
+            if not calls:
+                return jsonify({"error": "No valid MCP calls"}), 400
+
+            # Execute all calls
+            results = []
+            client = MCPClient(servers=MCP_SERVERS)
+
+            for call in calls:
+                try:
+                    res = client.call(call)
+                except Exception as e:
+                    res = {"success": False, "error": str(e)}
+
+                results.append(
+                    {
+                        "server": call.server,
+                        "tool": call.tool,
+                        "args": call.args,
+                        "result": res,
+                    }
+                )
+
+            return jsonify(
+                {
+                    "success": True,
+                    "results": results,
+                }
+            )
+        except MCPNotAvailable as e:
+            return jsonify({"error": f"MCP not available: {e}"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/chat/summarize", methods=["POST"])
+    def api_chat_summarize():
+        """API endpoint to get a follow-up answer after MCP execution"""
+        try:
+            data = request.get_json()
+            original_question = data.get("question", "").strip()
+            mcp_results = data.get("results", [])
+            provider = data.get("provider", "github")
+            model = data.get("model", "")
+            temperature = float(data.get("temperature", 0.7))
+
+            if not original_question or not mcp_results:
+                return jsonify({"error": "Question and results required"}), 400
+
+            # Get response function
+            response_func = CHAT_PROVIDERS.get(provider)
+            if not response_func:
+                return jsonify({"error": f"Provider {provider} not supported"}), 400
+
+            if not model:
+                model = PROVIDER_MODELS.get(provider, "")
+
+            # Build context from results
+            results_context = []
+            for r in mcp_results:
+                if r.get("result", {}).get("success"):
+                    output = r["result"].get("output", "")
+                    tool = r.get("tool", "unknown")
+                    if isinstance(output, list):
+                        # Format search results
+                        formatted = "\n".join(
+                            f"- {item.get('title', '')}: {item.get('snippet', '')[:200]} ({item.get('url', '')})"
+                            for item in output[:5]
+                        )
+                        results_context.append(f"[{tool} results]:\n{formatted}")
+                    else:
+                        results_context.append(
+                            f"[{tool} output]:\n{str(output)[:1000]}"
+                        )
+
+            if not results_context:
+                return jsonify({"error": "No successful results to summarize"}), 400
+
+            # Generate follow-up response
+            followup_prompt = f"""Based on the tool results below, provide a helpful answer to the user's original question.
+
+Tool Results:
+{chr(10).join(results_context)}
+
+Original question: {original_question}
+
+Provide a clear, concise answer based on the information above. Do NOT output any JSON or mcp_calls - just answer naturally."""
+
+            followup_response = response_func(
+                query=followup_prompt,
+                system_prompt="You are a helpful assistant. Answer the user's question based on the provided tool results. Be concise and informative.",
+                model=model,
+                temperature=temperature,
+            )
+
+            return jsonify(
+                {
+                    "success": True,
+                    "answer": followup_response,
                 }
             )
         except Exception as e:

@@ -5,7 +5,7 @@ content %}
   <div class="chat-header">
     <div class="flex items-center gap-3">
       <h2 class="text-xl font-bold text-gray-100">💬 Agentic Chat</h2>
-      <span class="badge-agentic">⚡ Can execute commands</span>
+      <span class="badge-agentic">⚡ MCP Tools Enabled</span>
     </div>
 
     <!-- Settings -->
@@ -44,13 +44,13 @@ content %}
     <template x-if="messages.length === 0">
       <div class="chat-empty">
         <div class="text-4xl mb-3">🤖</div>
-        <p class="text-gray-400 text-lg">Agentic Chat</p>
+        <p class="text-gray-400 text-lg">Agentic Chat with MCP</p>
         <p class="text-gray-500 text-sm mt-2">
-          Ask me to perform tasks - I can execute commands!
+          Ask me to perform tasks - I use MCP tools!
         </p>
         <p class="text-gray-600 text-xs mt-1">
-          Examples: "delete tests.py from tests folder", "create a hello.txt
-          file", "list files"
+          Examples: "create a hello.py file", "read README.md", "list files in
+          current directory"
         </p>
       </div>
     </template>
@@ -72,9 +72,41 @@ content %}
           x-html="formatMessage(msg.content)"
         ></div>
 
-        <!-- Show execute buttons for commands in assistant messages (hide after executed) -->
+        <!-- Show MCP tool calls (new style) -->
         <template
-          x-if="msg.role === 'assistant' && msg.commands && msg.commands.length > 0 && !msg.executed"
+          x-if="msg.role === 'assistant' && msg.mcp_calls && msg.mcp_calls.length > 0 && !msg.executed"
+        >
+          <div class="mcp-actions">
+            <div class="mcp-plan-header">📋 Execution Plan</div>
+            <template x-for="(call, callIdx) in msg.mcp_calls" :key="callIdx">
+              <div class="mcp-call-item">
+                <span
+                  class="mcp-call-number"
+                  x-text="(callIdx + 1) + '.'"
+                ></span>
+                <span
+                  class="mcp-call-tool"
+                  x-text="getToolDisplayName(call.tool)"
+                ></span>
+                <span
+                  class="mcp-call-desc"
+                  x-text="getToolDescription(call)"
+                ></span>
+              </div>
+            </template>
+            <button
+              @click="executeMcpCalls(msg.mcp_calls, index)"
+              class="btn btn-execute-mcp"
+              :disabled="isExecuting"
+            >
+              ▶️ Execute All
+            </button>
+          </div>
+        </template>
+
+        <!-- Show legacy shell commands (fallback) -->
+        <template
+          x-if="msg.role === 'assistant' && msg.commands && msg.commands.length > 0 && !msg.mcp_calls?.length && !msg.executed"
         >
           <div class="command-actions">
             <template x-for="(cmd, cmdIdx) in msg.commands" :key="cmdIdx">
@@ -94,20 +126,27 @@ content %}
       </div>
     </template>
 
-    <!-- Execution result -->
-    <template x-if="executionResult">
-      <div class="chat-message-system">
-        <div class="chat-message-header">
-          <span class="chat-message-role">⚙️ Execution Result</span>
+    <!-- MCP execution results -->
+    <template x-for="(result, idx) in mcpResults" :key="'mcp-' + idx">
+      <div
+        class="mcp-result-panel"
+        :class="result.result.success ? 'mcp-success' : 'mcp-error'"
+      >
+        <div class="mcp-result-header">
+          <span
+            x-text="result.result.success ? '✓' : '✗'"
+            :class="result.result.success ? 'text-green-400' : 'text-red-400'"
+          ></span>
+          <span
+            class="mcp-result-tool"
+            x-text="getToolDisplayName(result.tool)"
+          ></span>
+          <span
+            class="mcp-result-desc"
+            x-text="getToolDescription(result)"
+          ></span>
         </div>
-        <div class="chat-message-content">
-          <div :class="executionResult.success ? 'exec-success' : 'exec-error'">
-            <strong
-              x-text="executionResult.success ? '✅ Success' : '❌ Failed'"
-            ></strong>
-            <pre class="exec-output" x-text="executionResult.output"></pre>
-          </div>
-        </div>
+        <pre class="mcp-result-content" x-text="formatMcpOutput(result)"></pre>
       </div>
     </template>
 
@@ -130,11 +169,11 @@ content %}
     <template x-if="isExecuting">
       <div class="chat-message-system">
         <div class="chat-message-header">
-          <span class="chat-message-role">⚙️ Executing</span>
+          <span class="chat-message-role">⚙️ Executing MCP Tools</span>
         </div>
         <div class="chat-message-content">
           <div class="thinking-indicator">
-            <span>Running command</span>
+            <span>Running</span>
             <span class="thinking-dots">
               <span>.</span><span>.</span><span>.</span>
             </span>
@@ -150,7 +189,7 @@ content %}
       <textarea
         x-model="inputMessage"
         @keydown.enter.prevent="if(!$event.shiftKey) sendMessage()"
-        placeholder="Ask me to do something... (e.g., 'delete tests.py from tests folder')"
+        placeholder="Ask me to do something... (e.g., 'create a file hello.py with print hello')"
         class="chat-input"
         rows="3"
         :disabled="isThinking || isExecuting"
@@ -168,8 +207,114 @@ content %}
   </div>
 </div>
 
+<style>
+  /* MCP-specific styles */
+  .mcp-actions {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+  }
+  .mcp-plan-header {
+    font-weight: 600;
+    color: #60a5fa;
+    margin-bottom: 8px;
+  }
+  .mcp-call-item {
+    padding: 4px 0;
+    font-family: monospace;
+    font-size: 0.9em;
+  }
+  .mcp-call-number {
+    color: #6b7280;
+    margin-right: 8px;
+  }
+  .mcp-call-tool {
+    color: #22d3d1;
+    font-weight: 600;
+  }
+  .mcp-call-desc {
+    color: #9ca3af;
+    margin-left: 8px;
+  }
+  .btn-execute-mcp {
+    margin-top: 12px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-execute-mcp:hover {
+    opacity: 0.9;
+  }
+  .btn-execute-mcp:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .mcp-result-panel {
+    margin: 8px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid;
+  }
+  .mcp-success {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+  }
+  .mcp-error {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+  .mcp-result-header {
+    padding: 8px 12px;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mcp-result-tool {
+    color: #22d3d1;
+    font-weight: 600;
+  }
+  .mcp-result-desc {
+    color: #9ca3af;
+  }
+  .mcp-result-content {
+    padding: 8px 12px;
+    margin: 0;
+    font-size: 0.85em;
+    background: rgba(0, 0, 0, 0.2);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+</style>
+
 <script>
   function chatApp() {
+    // Tool display name mapping (same as CLI)
+    const TOOL_DISPLAY_NAMES = {
+      read_file: "ReadFile",
+      write_file: "WriteFile",
+      replace: "Edit",
+      list_directory: "ListDir",
+      glob: "Glob",
+      search_file_content: "Search",
+      run_shell_command: "Shell",
+      web_fetch: "WebFetch",
+      google_web_search: "WebSearch",
+      save_memory: "SaveMemory",
+      get_memory: "GetMemory",
+      write_todos: "WriteTodos",
+      read_todos: "ReadTodos",
+      delegate_to_agent: "Delegate",
+    };
+
     return {
       messages: [],
       inputMessage: "",
@@ -179,9 +324,64 @@ content %}
       isThinking: false,
       isExecuting: false,
       error: "",
+      mcpResults: [],
 
       init() {
         this.loadHistory();
+      },
+
+      getToolDisplayName(tool) {
+        return TOOL_DISPLAY_NAMES[tool] || tool;
+      },
+
+      getToolDescription(call) {
+        const tool = call.tool;
+        const args = call.args || {};
+
+        if (tool === "write_file") return `Writing to ${args.path || "file"}`;
+        if (tool === "read_file") return `Reading ${args.path || "file"}`;
+        if (tool === "replace") return `Editing ${args.path || "file"}`;
+        if (tool === "list_directory") return `Listing ${args.path || "."}`;
+        if (tool === "glob") return `Finding ${args.pattern || "*"}`;
+        if (tool === "search_file_content")
+          return `Searching for "${(args.pattern || "").substring(0, 20)}"`;
+        if (tool === "run_shell_command")
+          return `${(args.command || "").substring(0, 40)}`;
+        if (tool === "web_fetch") return `Fetching ${args.url || "URL"}`;
+        if (tool === "google_web_search")
+          return `Searching "${(args.query || "").substring(0, 20)}"`;
+        if (tool === "save_memory") return `Saving ${args.key || "key"}`;
+        if (tool === "get_memory") return `Getting ${args.key || "key"}`;
+        if (tool === "delegate_to_agent")
+          return `To ${args.agent_name || "agent"}`;
+        return "";
+      },
+
+      formatMcpOutput(result) {
+        const res = result.result || {};
+        if (!res.success) {
+          return `Error: ${res.error || res.output || "Unknown error"}`;
+        }
+
+        const output = res.output;
+        if (output === null || output === undefined) return "(completed)";
+
+        // Handle file write
+        if (result.tool === "write_file") {
+          const content = result.args?.content || "";
+          const lines = content.split("\n").slice(0, 15);
+          const numbered = lines.map((l, i) => `${i + 1} ${l}`).join("\n");
+          if (content.split("\n").length > 15)
+            return numbered + "\n... (truncated)";
+          return numbered;
+        }
+
+        // Handle other outputs
+        const str =
+          typeof output === "string" ? output : JSON.stringify(output, null, 2);
+        if (str.length > 500)
+          return str.substring(0, 500) + "\n... (truncated)";
+        return str;
       },
 
       async loadHistory() {
@@ -201,6 +401,7 @@ content %}
         const message = this.inputMessage.trim();
         this.inputMessage = "";
         this.error = "";
+        this.mcpResults = []; // Clear previous results
 
         // Add user message
         this.messages.push({
@@ -232,12 +433,13 @@ content %}
             this.error = data.error;
             this.messages.pop();
           } else {
-            // Add assistant response with commands
+            // Add assistant response with MCP calls or commands
             this.messages.push({
               role: "assistant",
               content: data.response,
               timestamp: new Date().toISOString(),
               commands: data.commands || [],
+              mcp_calls: data.mcp_calls || [],
             });
           }
         } catch (err) {
@@ -246,6 +448,109 @@ content %}
         } finally {
           this.isThinking = false;
           this.$nextTick(() => this.scrollToBottom());
+        }
+      },
+
+      async executeMcpCalls(mcpCalls, msgIndex) {
+        this.isExecuting = true;
+        this.mcpResults = [];
+        this.summaryAnswer = null;
+        this.$nextTick(() => this.scrollToBottom());
+
+        // Get the original question from the user message before this assistant message
+        let originalQuestion = "";
+        if (msgIndex > 0) {
+          for (let i = msgIndex - 1; i >= 0; i--) {
+            if (this.messages[i].role === "user") {
+              originalQuestion = this.messages[i].content;
+              break;
+            }
+          }
+        }
+
+        try {
+          const response = await fetch("/api/chat/execute-mcp", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ mcp_calls: mcpCalls }),
+          });
+
+          const data = await response.json();
+
+          // Mark the message as executed
+          if (msgIndex >= 0 && msgIndex < this.messages.length) {
+            this.messages[msgIndex].executed = true;
+          }
+
+          if (data.error) {
+            this.error = data.error;
+          } else {
+            // Show results
+            this.mcpResults = data.results || [];
+
+            // Check if we have informational tool results that need summarizing
+            const infoTools = [
+              "google_web_search",
+              "web_fetch",
+              "read_file",
+              "list_directory",
+              "glob",
+              "search_file_content",
+              "get_memory",
+              "read_todos",
+            ];
+            const hasInfoResults = this.mcpResults.some(
+              (r) => infoTools.includes(r.tool) && r.result?.success
+            );
+
+            // Auto-summarize if we have info results and an original question
+            if (hasInfoResults && originalQuestion) {
+              await this.getSummaryAnswer(originalQuestion, this.mcpResults);
+            }
+          }
+        } catch (err) {
+          if (msgIndex >= 0 && msgIndex < this.messages.length) {
+            this.messages[msgIndex].executed = true;
+          }
+          this.error = "Failed to execute MCP calls: " + err.message;
+        } finally {
+          this.isExecuting = false;
+          this.$nextTick(() => this.scrollToBottom());
+        }
+      },
+
+      async getSummaryAnswer(question, results) {
+        try {
+          const response = await fetch("/api/chat/summarize", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              question: question,
+              results: results,
+              provider: this.provider,
+              model: this.model,
+              temperature: this.temperature,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.success && data.answer) {
+            // Add the summarized answer as a new assistant message
+            this.messages.push({
+              role: "assistant",
+              content: data.answer,
+              timestamp: new Date().toISOString(),
+              isSummary: true,
+            });
+            this.$nextTick(() => this.scrollToBottom());
+          }
+        } catch (err) {
+          console.error("Failed to get summary:", err);
         }
       },
 

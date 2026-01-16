@@ -199,6 +199,30 @@ Logs are stored in `~/.agentos/logs/`:
 
 Agent registry stored in `~/.agentos/runtime.db` (SQLite)
 
+## 🧰 MCP Tooling (Optional)
+
+AgentOS can prefer MCP servers (Model Context Protocol) instead of emitting shell commands.
+
+- Enable MCP in your manifest:
+
+```yaml
+mcp:
+  enabled: true
+  servers:
+    - name: local_tools
+      kind: stdio
+      command: my-mcp-server --stdio
+```
+
+- Install a Python MCP SDK (one of):
+
+```bash
+pip install mcp
+# or install the official Model Context Protocol Python SDK if available
+```
+
+- Chat/Web will now prompt models to output MCP calls in a JSON block. AgentOS parses and executes those calls via the MCP client, with safe fallback to command extraction when no MCP calls are present.
+
 ## 🐳 Docker Support
 
 Enable isolation for safe execution:
