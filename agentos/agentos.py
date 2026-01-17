@@ -17,6 +17,8 @@ from agentos.cli.cli_commands import (
     cmd_ps,
     cmd_run,
     cmd_schedule,
+    cmd_setup,
+    cmd_setup_show,
     cmd_ui,
     cmd_unschedule,
     enhanced_prune,
@@ -28,7 +30,7 @@ from agentos.cli.cli_parser import create_parser
 LOG_DIR = Path.home() / ".agentos" / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-console = Console()
+console = Console(force_terminal=True)
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -41,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    parser = create_parser()
+    parser, subparsers = create_parser()
 
     def chat_handler(args):
         """Handler for chat command"""
@@ -56,25 +58,28 @@ def main():
             mcp=use_mcp,
         )
 
-    for action in parser._subparsers._actions:
-        if hasattr(action, "choices") and action.choices:
-            action.choices["run"].set_defaults(func=cmd_run)
-            action.choices["ps"].set_defaults(func=cmd_ps)
-            action.choices["logs"].set_defaults(func=cmd_logs)
-            action.choices["stop"].set_defaults(
-                func=lambda args: enhanced_stop(args.agent)
-            )
-            action.choices["prune"].set_defaults(
-                func=lambda args: enhanced_prune(args.force)
-            )
-            action.choices["init"].set_defaults(
-                func=lambda args: create_default_manifest(args.name)
-            )
-            action.choices["schedule"].set_defaults(func=cmd_schedule)
-            action.choices["unschedule"].set_defaults(func=cmd_unschedule)
-            action.choices["ui"].set_defaults(func=cmd_ui)
-            action.choices["app"].set_defaults(func=cmd_app)
-            action.choices["chat"].set_defaults(func=chat_handler)
+    def setup_handler(args):
+        """Handler for setup command"""
+        if getattr(args, "show", False):
+            cmd_setup_show(args)
+        else:
+            cmd_setup(args)
+
+    # Set default handlers for each command
+    subparsers["setup"].set_defaults(func=setup_handler)
+    subparsers["run"].set_defaults(func=cmd_run)
+    subparsers["ps"].set_defaults(func=cmd_ps)
+    subparsers["logs"].set_defaults(func=cmd_logs)
+    subparsers["stop"].set_defaults(func=lambda args: enhanced_stop(args.agent))
+    subparsers["prune"].set_defaults(func=lambda args: enhanced_prune(args.force))
+    subparsers["init"].set_defaults(
+        func=lambda args: create_default_manifest(args.name)
+    )
+    subparsers["schedule"].set_defaults(func=cmd_schedule)
+    subparsers["unschedule"].set_defaults(func=cmd_unschedule)
+    subparsers["ui"].set_defaults(func=cmd_ui)
+    subparsers["app"].set_defaults(func=cmd_app)
+    subparsers["chat"].set_defaults(func=chat_handler)
 
     args = parser.parse_args()
 

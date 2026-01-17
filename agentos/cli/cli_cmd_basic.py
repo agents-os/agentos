@@ -22,10 +22,10 @@ from rich.table import Table
 
 from agentos.agent import cli_agent
 from agentos.core import config, threader, utils
-from agentos.database import db
 from agentos.core.scheduler import scheduler
+from agentos.database import db
 
-console = Console()
+console = Console(force_terminal=True)
 LOG_DIR = Path.home() / ".agentos" / "logs"
 
 
@@ -33,7 +33,9 @@ def cmd_run(args):
     """Run an agent from manifest file"""
     try:
         if not args.task:
-            console.print("[red]❌ No task specified. Use --task 'your task here'[/red]")
+            console.print(
+                "[red]❌ No task specified. Use --task 'your task here'[/red]"
+            )
             sys.exit(1)
 
         # Resolve manifest path - support both absolute and relative paths
@@ -43,15 +45,19 @@ def cmd_run(args):
             manifest_path = Path.cwd() / args.manifest
             if not manifest_path.exists():
                 console.print(f"[red]❌ Manifest file not found: {args.manifest}[/red]")
-                console.print(f"[dim]Searched in: {Path(args.manifest).resolve()}[/dim]")
+                console.print(
+                    f"[dim]Searched in: {Path(args.manifest).resolve()}[/dim]"
+                )
                 if Confirm.ask("Would you like to create a default manifest?"):
                     from agentos.cli.cli_helpers import create_default_manifest
+
                     create_default_manifest(str(manifest_path))
                 else:
                     sys.exit(1)
 
         with console.status("[bold blue]Setting up agent...", spinner="dots"):
             from agentos.cli.cli_helpers import load_manifest
+
             load_manifest(args.manifest)
             time.sleep(0.5)
 
@@ -65,7 +71,10 @@ def cmd_run(args):
         )
         console.print(info_panel)
 
-        if any(word in args.task.lower() for word in ["delete", "remove", "rm", "destroy", "kill"]):
+        if any(
+            word in args.task.lower()
+            for word in ["delete", "remove", "rm", "destroy", "kill"]
+        ):
             if not Confirm.ask("[yellow]⚠️  This task might be destructive. Continue?"):
                 console.print("[yellow]Operation cancelled.[/yellow]")
                 return
@@ -78,13 +87,23 @@ def cmd_run(args):
                 raise
 
         with console.status("[bold green]Starting agent...", spinner="dots"):
-            pid, process, queue = threader.run_in_separate_process(agent_wrapper, args.task)
+            pid, process, queue = threader.run_in_separate_process(
+                agent_wrapper, args.task
+            )
             time.sleep(0.5)
 
         uid = str(uuid.uuid4())
         log_path = LOG_DIR / f"{utils.NAME}_{uid[:8]}.log"
-        db.add_agent(agent_id=uid, name=utils.NAME, model=utils.MODEL, pid=pid, log_path=str(log_path))
-        console.print(f"[green]✅ Agent started successfully![/green] (ID: {uid[:8]}, PID: {pid})")
+        db.add_agent(
+            agent_id=uid,
+            name=utils.NAME,
+            model=utils.MODEL,
+            pid=pid,
+            log_path=str(log_path),
+        )
+        console.print(
+            f"[green]✅ Agent started successfully![/green] (ID: {uid[:8]}, PID: {pid})"
+        )
 
         if utils.TIME_CONFIG is not None or utils.REPEAT_CONFIG is not None:
             configs = config.yaml_to_json(args.manifest)
@@ -161,7 +180,9 @@ def cmd_run(args):
             )
         else:
             db.update_status(uid, "failed")
-            db.append_log(uid, f"Task failed with exit code {exit_code} after {duration:.1f}s")
+            db.append_log(
+                uid, f"Task failed with exit code {exit_code} after {duration:.1f}s"
+            )
             console.print(
                 Panel(
                     f"[red]❌ Task failed with exit code {exit_code}[/red]\n"
@@ -201,7 +222,11 @@ def cmd_ps(args):
             )
             return
 
-        table = Table(title="🤖 AgentOS - Running Agents", show_header=True, header_style="bold blue")
+        table = Table(
+            title="🤖 AgentOS - Running Agents",
+            show_header=True,
+            header_style="bold blue",
+        )
         table.add_column("ID", style="cyan", width=10)
         table.add_column("Name", style="green", width=20)
         table.add_column("Model", style="blue", width=25)
@@ -231,7 +256,9 @@ def cmd_ps(args):
                 agent.get("model", "unknown"),
                 status_display,
                 str(agent.get("pid", "N/A")),
-                agent.get("started_at", "N/A")[:19] if agent.get("started_at") else "N/A",
+                agent.get("started_at", "N/A")[:19]
+                if agent.get("started_at")
+                else "N/A",
                 actions,
             )
 
@@ -255,7 +282,9 @@ def cmd_logs(args):
             if all_agents:
                 console.print("\n[dim]Available agents:[/dim]")
                 for a in all_agents[:5]:
-                    console.print(f"[dim]  • {a.get('id', 'N/A')[:8]} - {a.get('name', 'unknown')}[/dim]")
+                    console.print(
+                        f"[dim]  • {a.get('id', 'N/A')[:8]} - {a.get('name', 'unknown')}[/dim]"
+                    )
             return
 
         log_path = agent.get("log_path")

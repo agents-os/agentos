@@ -1,13 +1,111 @@
+Metadata-Version: 2.1
+Name: agentos-ai
+Version: 1.1.7
+Summary: Production-Ready AI Agent Runtime - Automate everything with LLM-powered agents
+Home-page: https://agentos.sodeom.com/
+Author: AgentOS Team
+Author-email: AgentOS Team <support@agentos.dev>
+Maintainer-email: AgentOS Team <support@agentos.dev>
+Project-URL: Homepage, https://agentos.sodeom.com/
+Project-URL: Documentation, https://agentos.sodeom.com/docs
+Project-URL: Repository, https://github.com/agents-os/agentos
+Project-URL: Issues, https://github.com/agents-os/agentos/issues
+Project-URL: Changelog, https://github.com/agents-os/agentos/blob/main/MD/CHANGELOG.md
+Keywords: ai,agent,llm,automation,orchestration,chatbot,openai,claude,gemini,ollama,gpt,artificial-intelligence,machine-learning,command-line,cli
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Console
+Classifier: Environment :: Web Environment
+Classifier: Framework :: Flask
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Libraries :: Application Frameworks
+Classifier: Topic :: System :: Systems Administration
+Classifier: Topic :: Utilities
+Classifier: Typing :: Typed
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: requests>=2.28.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: typer>=0.9.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: click>=8.0.0
+Requires-Dist: ollama>=0.1.0
+Requires-Dist: flask>=2.3.0
+Requires-Dist: pywebview>=4.4.0
+Requires-Dist: PyQt5>=5.15.0
+Requires-Dist: PyQtWebEngine>=5.15.0
+Requires-Dist: QtPy>=2.0.0
+Provides-Extra: openai
+Requires-Dist: openai>=1.0.0; extra == "openai"
+Provides-Extra: claude
+Requires-Dist: anthropic>=0.18.0; extra == "claude"
+Provides-Extra: gemini
+Requires-Dist: google-generativeai>=0.3.0; extra == "gemini"
+Provides-Extra: cohere
+Requires-Dist: cohere>=4.0.0; extra == "cohere"
+Provides-Extra: ollama
+Requires-Dist: ollama>=0.1.0; extra == "ollama"
+Provides-Extra: mcp
+Requires-Dist: mcp>=0.1.0; extra == "mcp"
+Provides-Extra: llm
+Requires-Dist: openai>=1.0.0; extra == "llm"
+Requires-Dist: anthropic>=0.18.0; extra == "llm"
+Requires-Dist: google-generativeai>=0.3.0; extra == "llm"
+Requires-Dist: cohere>=4.0.0; extra == "llm"
+Requires-Dist: ollama>=0.1.0; extra == "llm"
+Provides-Extra: web
+Requires-Dist: flask>=2.3.0; extra == "web"
+Requires-Dist: gunicorn>=21.0.0; extra == "web"
+Requires-Dist: gevent>=23.0.0; extra == "web"
+Provides-Extra: desktop
+Requires-Dist: pywebview>=4.4.0; extra == "desktop"
+Requires-Dist: PyQt5>=5.15.0; extra == "desktop"
+Requires-Dist: PyQtWebEngine>=5.15.0; extra == "desktop"
+Requires-Dist: QtPy>=2.0.0; extra == "desktop"
+Provides-Extra: docker
+Requires-Dist: docker>=6.0.0; extra == "docker"
+Provides-Extra: monitoring
+Requires-Dist: prometheus-client>=0.19.0; extra == "monitoring"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: build>=1.0.0; extra == "dev"
+Requires-Dist: twine>=4.0.0; extra == "dev"
+Provides-Extra: full
+Requires-Dist: openai>=1.0.0; extra == "full"
+Requires-Dist: anthropic>=0.18.0; extra == "full"
+Requires-Dist: google-generativeai>=0.3.0; extra == "full"
+Requires-Dist: cohere>=4.0.0; extra == "full"
+Requires-Dist: ollama>=0.1.0; extra == "full"
+Requires-Dist: mcp>=0.1.0; extra == "full"
+Requires-Dist: flask>=2.3.0; extra == "full"
+Requires-Dist: gunicorn>=21.0.0; extra == "full"
+Requires-Dist: gevent>=23.0.0; extra == "full"
+Requires-Dist: pywebview>=4.4.0; extra == "full"
+Requires-Dist: docker>=6.0.0; extra == "full"
+Requires-Dist: prometheus-client>=0.19.0; extra == "full"
+
 # AgentOS - Production AI Agent Runtime
 
-[![Version](https://img.shields.io/badge/version-1.1.7-blue.svg)](https://pypi.org/project/agentos-ai/)
-[![Website](https://img.shields.io/badge/website-agentos.sodeom.com-green.svg)](https://agentos.sodeom.com/)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/agentos/agentos)
 [![Python](https://img.shields.io/badge/python-3.8+-green.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 AgentOS is a production-ready runtime for autonomous AI agents with built-in memory management, safe tool sandboxing, and multi-provider LLM support.
-
-**Website:** [agentos.sodeom.com](https://agentos.sodeom.com/) | **Package:** [PyPI](https://pypi.org/project/agentos-ai/)
 
 ## 🎬 Demo
 
@@ -17,19 +115,9 @@ AgentOS is a production-ready runtime for autonomous AI agents with built-in mem
 
 ### Installation
 
-Install from PyPI:
+<!-- Purchase and download from: **https://junaidahmed65.gumroad.com/l/spfzuo**  -->
 
-```bash
-pip install agentos-ai
-```
-
-Then configure your API keys:
-
-```bash
-agentos setup
-```
-
-**Alternative:** Manual installer
+Then run the installer:
 
 ```bash
 # Linux

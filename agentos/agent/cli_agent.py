@@ -11,7 +11,7 @@ from agentos.agent.agent_executor import execute_command
 from agentos.agent.agent_planner import ask_llm, execute_step, generate_plan
 
 logger = logging.getLogger(__name__)
-console = Console()
+console = Console(force_terminal=True)
 
 
 def main(query: str, max_steps: int = 10):

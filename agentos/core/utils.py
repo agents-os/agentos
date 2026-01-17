@@ -1,4 +1,4 @@
-chat_history = []
+chat_history = {}
 PERMS = []
 PROVIDER = "gemini"
 MODEL = "models/gemini-2.0-flash-lite"

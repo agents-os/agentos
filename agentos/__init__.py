@@ -14,12 +14,19 @@ Features:
 - Graceful Shutdown support
 - Extensible via MCP (Model Context Protocol)
 
+Installation:
+    pip install agentos-ai              # Basic installation
+    pip install agentos-ai[full]        # Full installation with all features
+    pip install agentos-ai[openai]      # With OpenAI support
+    pip install agentos-ai[ollama]      # With Ollama (local models)
+
 MIT Licensed - Free to use and modify.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "AgentOS Team"
 __license__ = "MIT"
+__email__ = "support@agentos.dev"
 
 # Core utilities
 # Chat history persistence

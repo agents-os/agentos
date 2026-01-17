@@ -5,7 +5,7 @@ from rich.prompt import Confirm
 
 from agentos.database import db
 
-console = Console()
+console = Console(force_terminal=True)
 
 
 def enhanced_stop(agent_id):
@@ -30,7 +30,9 @@ def enhanced_prune(force=False):
         console.print("[green]✨ No stopped agents to clean up[/green]")
         return
 
-    console.print(f"[yellow]Found {len(stopped_agents)} stopped agents to remove:[/yellow]")
+    console.print(
+        f"[yellow]Found {len(stopped_agents)} stopped agents to remove:[/yellow]"
+    )
     for agent in stopped_agents[:5]:
         console.print(
             f"[dim]  • {agent.get('id', 'N/A')[:8]} - {agent.get('name', 'unknown')} ({agent.get('status')})[/dim]"

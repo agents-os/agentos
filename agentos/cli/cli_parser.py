@@ -1,29 +1,236 @@
 #!/usr/bin/env python3
-"""CLI Argument Parser for AgentOS"""
+"""CLI Argument Parser for AgentOS with Rich Help"""
 
 import argparse
+import sys
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+
+console = Console(force_terminal=True)
+
+
+class RichHelpFormatter(argparse.HelpFormatter):
+    """Custom help formatter using Rich for beautiful output."""
+
+    def __init__(self, prog, indent_increment=2, max_help_position=30, width=None):
+        super().__init__(prog, indent_increment, max_help_position, width or 80)
+
+    def format_help(self):
+        """Override to use Rich formatting."""
+        # We'll handle this in the custom print_help
+        return super().format_help()
+
+
+def print_rich_help(parser, subcommand=None):
+    """Print help using Rich formatting."""
+
+    if subcommand and hasattr(parser, "_subparsers"):
+        # Find the subparser
+        for action in parser._subparsers._actions:
+            if hasattr(action, "choices") and subcommand in action.choices:
+                sub_parser = action.choices[subcommand]
+                print_subcommand_help(sub_parser, subcommand)
+                return
+
+    # Main help
+    console.print()
+    console.print(
+        Panel.fit(
+            "[bold cyan]🤖 AgentOS[/bold cyan] - [dim]Production AI Agent Runtime[/dim]\n\n"
+            "[dim]Automate everything with LLM-powered agents[/dim]",
+            border_style="cyan",
+            padding=(1, 2),
+        )
+    )
+
+    # Usage
+    console.print("\n[bold yellow]USAGE[/bold yellow]")
+    console.print("  [cyan]agentos[/cyan] [dim]<command>[/dim] [dim][options][/dim]\n")
+
+    # Commands table
+    console.print("[bold yellow]COMMANDS[/bold yellow]")
+
+    table = Table(show_header=False, box=None, padding=(0, 2, 0, 0))
+    table.add_column("Command", style="cyan", width=15)
+    table.add_column("Description")
+
+    commands = [
+        ("run", "🚀 Run an agent from manifest"),
+        ("chat", "💬 Interactive chat mode with LLM"),
+        ("setup", "🔧 Configure API keys and settings"),
+        ("ps", "📋 List all agents"),
+        ("logs", "📄 Show agent logs"),
+        ("stop", "🛑 Stop a running agent"),
+        ("prune", "🧹 Clean up stopped agents"),
+        ("init", "🛠️  Initialize new manifest"),
+        ("schedule", "🕰️  Show scheduled agents"),
+        ("unschedule", "🗑️  Remove scheduled agents"),
+        ("ui", "🌐 Start web UI"),
+        ("app", "🖥️  Launch desktop app"),
+    ]
+
+    for cmd, desc in commands:
+        table.add_row(cmd, desc)
+
+    console.print(table)
+
+    # Global options
+    console.print("\n[bold yellow]OPTIONS[/bold yellow]")
+    opts_table = Table(show_header=False, box=None, padding=(0, 2, 0, 0))
+    opts_table.add_column("Option", style="green", width=20)
+    opts_table.add_column("Description")
+
+    opts_table.add_row("--version", "Show version number")
+    opts_table.add_row("-v, --verbose", "Enable verbose logging")
+    opts_table.add_row("--no-color", "Disable colored output")
+    opts_table.add_row("-h, --help", "Show this help message")
+
+    console.print(opts_table)
+
+    # Examples
+    console.print("\n[bold yellow]EXAMPLES[/bold yellow]")
+    examples = [
+        ("agentos setup", "Configure your API keys"),
+        ("agentos chat --provider gemini", "Start chat with Gemini"),
+        ("agentos chat -p claude", "Start chat with Claude"),
+        ("agentos run agent.yaml --task 'write code'", "Run agent with task"),
+        ("agentos ui --port 8080", "Start web UI on port 8080"),
+    ]
+
+    for cmd, desc in examples:
+        console.print(f"  [cyan]{cmd}[/cyan]")
+        console.print(f"    [dim]{desc}[/dim]")
+
+    # Footer
+    console.print(
+        "\n[dim]For command help: [cyan]agentos <command> --help[/cyan][/dim]"
+    )
+    console.print(
+        "[dim]Documentation: [link=https://agentos.sodeom.com/]https://agentos.sodeom.com/[/link][/dim]\n"
+    )
+
+
+def print_subcommand_help(parser, command):
+    """Print help for a specific subcommand."""
+    console.print()
+
+    # Header
+    title = f"[bold cyan]agentos {command}[/bold cyan]"
+    desc = parser.description or parser.format_usage()
+
+    console.print(
+        Panel.fit(f"{title}\n\n[dim]{desc}[/dim]", border_style="cyan", padding=(1, 2))
+    )
+
+    # Usage
+    console.print("\n[bold yellow]USAGE[/bold yellow]")
+
+    # Build usage string
+    usage_parts = [f"[cyan]agentos {command}[/cyan]"]
+
+    for action in parser._actions:
+        if action.dest == "help":
+            continue
+        if action.option_strings:
+            if action.required:
+                usage_parts.append(f"[green]{action.option_strings[0]}[/green] <value>")
+            else:
+                usage_parts.append(f"[dim][{action.option_strings[0]}][/dim]")
+        elif action.dest != "func":
+            if action.nargs == "?":
+                usage_parts.append(f"[dim][{action.dest}][/dim]")
+            else:
+                usage_parts.append(f"[yellow]<{action.dest}>[/yellow]")
+
+    console.print("  " + " ".join(usage_parts) + "\n")
+
+    # Arguments
+    positional = [
+        a
+        for a in parser._actions
+        if not a.option_strings and a.dest not in ("help", "func")
+    ]
+    if positional:
+        console.print("[bold yellow]ARGUMENTS[/bold yellow]")
+        args_table = Table(show_header=False, box=None, padding=(0, 2, 0, 0))
+        args_table.add_column("Arg", style="yellow", width=20)
+        args_table.add_column("Description")
+
+        for action in positional:
+            required = "" if action.nargs == "?" else " [red](required)[/red]"
+            args_table.add_row(action.dest, (action.help or "") + required)
+
+        console.print(args_table)
+        console.print()
+
+    # Options
+    optional = [a for a in parser._actions if a.option_strings and a.dest != "help"]
+    if optional:
+        console.print("[bold yellow]OPTIONS[/bold yellow]")
+        opts_table = Table(show_header=False, box=None, padding=(0, 2, 0, 0))
+        opts_table.add_column("Option", style="green", width=25)
+        opts_table.add_column("Description")
+
+        for action in optional:
+            opt_str = ", ".join(action.option_strings)
+            if action.type or action.choices:
+                if action.choices:
+                    opt_str += f" [dim]{{{','.join(map(str, action.choices))}}}[/dim]"
+                else:
+                    opt_str += " [dim]<value>[/dim]"
+
+            help_text = action.help or ""
+            if action.default is not None and action.default != argparse.SUPPRESS:
+                if action.default not in (True, False, None):
+                    help_text += f" [dim](default: {action.default})[/dim]"
+
+            opts_table.add_row(opt_str, help_text)
+
+        opts_table.add_row("-h, --help", "Show this help message")
+        console.print(opts_table)
+
+    console.print()
+
+
+class RichArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser with Rich help output."""
+
+    def print_help(self, file=None):
+        """Override to use Rich formatting."""
+        print_rich_help(self)
+
+    def error(self, message):
+        """Override to use Rich for errors."""
+        console.print(f"[red]❌ Error:[/red] {message}")
+        console.print(
+            f"[dim]Try '[cyan]agentos --help[/cyan]' for usage information.[/dim]\n"
+        )
+        sys.exit(2)
+
+
+class RichSubParser(argparse.ArgumentParser):
+    """Sub-parser with Rich help."""
+
+    def __init__(self, *args, command_name=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._command_name = command_name
+
+    def print_help(self, file=None):
+        """Override to use Rich formatting."""
+        print_subcommand_help(self, self._command_name or self.prog.split()[-1])
 
 
 def create_parser():
-    """Create and configure argument parser"""
-    parser = argparse.ArgumentParser(
+    """Create and configure argument parser with Rich help"""
+    parser = RichArgumentParser(
         prog="agentos",
         description="🤖 AgentOS - Production AI Agent Runtime",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  agentos run agent.yaml --task "create a Python script"
-  agentos chat --provider openai
-  agentos chat --provider claude --temperature 0.5
-  agentos ps
-  agentos logs agent-123
-  agentos stop agent-123
-  agentos prune
-
-For more help: https://docs.agentos.dev
-        """,
+        add_help=True,
     )
-    parser.add_argument("--version", action="version", version="🤖 AgentOS 1.0.0")
+    parser.add_argument("--version", action="version", version="🤖 AgentOS 1.1.6")
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
@@ -32,7 +239,20 @@ For more help: https://docs.agentos.dev
     )
 
     subparsers = parser.add_subparsers(
-        dest="command", help="Available commands", metavar="COMMAND"
+        dest="command",
+        help="Available commands",
+        metavar="COMMAND",
+        parser_class=RichSubParser,
+    )
+
+    # setup - Configure API keys
+    p_setup = subparsers.add_parser(
+        "setup",
+        help="🔧 Configure API keys",
+        description="Interactive wizard to configure LLM provider API keys",
+    )
+    p_setup.add_argument(
+        "--show", action="store_true", help="Show current configuration status"
     )
 
     # run
@@ -45,9 +265,7 @@ For more help: https://docs.agentos.dev
     p_run.add_argument(
         "--task", "-t", required=True, help="Task for the agent to execute"
     )
-    p_run.add_argument(
-        "--timeout", type=int, default=300, help="Timeout in seconds (default: 300)"
-    )
+    p_run.add_argument("--timeout", type=int, default=300, help="Timeout in seconds")
     p_run.add_argument(
         "--isolated", action="store_true", help="Force enable sandboxing"
     )
@@ -183,4 +401,20 @@ For more help: https://docs.agentos.dev
         help="Disable MCP mode (use shell commands instead)",
     )
 
-    return parser
+    # Return parser and subparsers dict for setting defaults
+    subparser_dict = {
+        "setup": p_setup,
+        "run": p_run,
+        "ps": p_ps,
+        "logs": p_logs,
+        "stop": p_stop,
+        "prune": p_prune,
+        "init": p_init,
+        "schedule": p_schedule,
+        "unschedule": p_unschedule,
+        "ui": p_ui,
+        "app": p_app,
+        "chat": p_chat,
+    }
+
+    return parser, subparser_dict

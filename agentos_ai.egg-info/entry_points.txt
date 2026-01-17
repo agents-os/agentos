@@ -1,0 +1,2 @@
+[console_scripts]
+agentos = agentos.agentos:main

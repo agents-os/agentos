@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import time
+from pathlib import Path
 from typing import Optional
 
 import ollama
@@ -11,7 +12,13 @@ import requests
 from dotenv import load_dotenv
 from ollama import Options
 
-load_dotenv()
+# Load .env from multiple locations (in order of priority)
+# 1. Current working directory
+# 2. ~/.agentos/.env (user config)
+# 3. ~/.agentos/source/agentos/.env (installed location)
+load_dotenv()  # Current directory
+load_dotenv(Path.home() / ".agentos" / ".env")  # User config
+load_dotenv(Path.home() / ".agentos" / "source" / "agentos" / ".env")  # Install dir
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,41 @@
 include README.md
-include requirements.txt
 include LICENSE
+include VERSION
+include pyproject.toml
+include requirements.txt
+
+# Package source files
 recursive-include agentos *.py
-recursive-include templates *.html
-recursive-include static *.css *.js
-recursive-include examples *.yaml
+recursive-include agentos *.pyi
+include agentos/py.typed
+
+# Templates and static files (inside agentos package)
+recursive-include agentos/templates *.html
+recursive-include agentos/static *.css *.js *.png *.ico
+
+# Example manifests
+recursive-include examples *.yaml *.yml *.py
+
+# Documentation (for reference, not installed)
 recursive-include MD *.md
-include bin/agentos
-include bin/agentos.bat
+
+# Configuration templates
+include default.yaml
+include deafult.yaml
+
+# Assets
+recursive-include assets *.png *.gif *.ico *.svg
+
+# Exclude development/build files
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so
+global-exclude .DS_Store
+global-exclude .git*
+global-exclude *.egg-info
+prune tests
+prune installer
+prune uninstaller
+prune .venv
+prune build
+prune dist

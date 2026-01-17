@@ -396,17 +396,21 @@ def cmd_chat(
     # Determine if MCP is enabled (CLI flag overrides config)
     use_mcp = mcp or MCP_ENABLED
 
-    console = Console() if RICH_AVAILABLE else None
+    console = Console(force_terminal=True) if RICH_AVAILABLE else None
 
     # Validate provider
     provider = provider.lower()
     if provider not in PROVIDERS:
         if console:
             console.print(f"[red]Error:[/red] Invalid provider '{provider}'")
-            console.print(f"[dim]Available providers: {', '.join(PROVIDERS.keys())}[/dim]")
+            console.print(
+                f"[dim]Available providers: {', '.join(PROVIDERS.keys())}[/dim]"
+            )
         else:
             print(f"Error: Invalid provider '{provider}'", file=sys.stderr)
-            print(f"Available providers: {', '.join(PROVIDERS.keys())}", file=sys.stderr)
+            print(
+                f"Available providers: {', '.join(PROVIDERS.keys())}", file=sys.stderr
+            )
         sys.exit(1)
 
     # Set model

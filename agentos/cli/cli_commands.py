@@ -4,6 +4,7 @@
 from agentos.cli.cli_cmd_basic import cmd_logs, cmd_ps, cmd_run
 from agentos.cli.cli_cmd_chat import cmd_chat
 from agentos.cli.cli_cmd_schedule import cmd_schedule, cmd_unschedule
+from agentos.cli.cli_cmd_setup import cmd_setup, cmd_setup_show
 from agentos.cli.cli_cmd_ui import cmd_app, cmd_ui
 from agentos.cli.cli_cmd_utils import enhanced_prune, enhanced_stop
 
@@ -16,6 +17,8 @@ __all__ = [
     "cmd_ui",
     "cmd_app",
     "cmd_chat",
+    "cmd_setup",
+    "cmd_setup_show",
     "enhanced_stop",
     "enhanced_prune",
 ]

@@ -10,7 +10,7 @@ from rich.prompt import Confirm, Prompt
 
 from agentos.core import config, path_resolver, utils
 
-console = Console()
+console = Console(force_terminal=True)
 logger = logging.getLogger(__name__)
 
 

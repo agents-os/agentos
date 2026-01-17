@@ -7,7 +7,7 @@ from rich.console import Console
 
 from agentos.core.scheduler import scheduler
 
-console = Console()
+console = Console(force_terminal=True)
 
 
 def cmd_ui(args):
@@ -21,6 +21,7 @@ def cmd_ui(args):
             scheduler.start()
 
         from agentos.web.web_ui import app
+
         app.run(host=args.host, port=args.port, debug=False)
 
     except KeyboardInterrupt:
@@ -80,6 +81,7 @@ def cmd_app(args):
         import time
 
         import webview
+
         from agentos.web.web_ui import app
 
         logging.getLogger("webview").setLevel(logging.CRITICAL)
@@ -115,6 +117,7 @@ def cmd_app(args):
                 if self.window:
                     try:
                         from PyQt5.QtWidgets import QApplication
+
                         for widget in QApplication.instance().topLevelWidgets():
                             if widget.isMaximized():
                                 widget.showNormal()
@@ -148,7 +151,9 @@ def cmd_app(args):
     except ImportError as e:
         console.print(f"[red]❌ Missing dependencies: {e}[/red]")
         console.print("[dim]Install with: pip install PyQtWebEngine[/dim]")
-        console.print("[dim]Or system: sudo apt install python3-pyqt5.qtwebengine[/dim]")
+        console.print(
+            "[dim]Or system: sudo apt install python3-pyqt5.qtwebengine[/dim]"
+        )
         console.print("[dim]Falling back to web UI...[/dim]")
         args.port = 5001
         cmd_ui(args)
